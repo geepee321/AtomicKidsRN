@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "scheme": "acme",
+    "plugins": [
+      "expo-router"
+    ],
+    "name": "AtomicKids",
+    "slug": "AtomicKids",
+    "newArchEnabled": true
+  }
+}
