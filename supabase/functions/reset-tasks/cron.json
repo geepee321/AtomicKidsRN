@@ -1,0 +1,5 @@
+{
+  "cron": "0 0 * * * Australia/Sydney",
+  "function": "reset-tasks",
+  "description": "Reset completed tasks daily at midnight Sydney time"
+} 
