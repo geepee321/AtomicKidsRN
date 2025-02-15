@@ -6,7 +6,7 @@ import { useChildren } from '../context/children';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 
 export const RewardsScreen = () => {
   const { rewards, unlockedRewards, selectedCharacterId, selectCharacter, isLoading, refreshRewards, setActiveChild } = useRewards();
@@ -26,6 +26,11 @@ export const RewardsScreen = () => {
     if (childId) {
       await refreshRewards(childId);
     }
+  };
+
+  const handleCharacterSelect = async (rewardId: string) => {
+    await selectCharacter(rewardId);
+    router.back();
   };
 
   const isRewardUnlocked = (rewardId: string) => {
@@ -75,16 +80,19 @@ export const RewardsScreen = () => {
                   isSelected && styles.selectedCard,
                   !unlocked && styles.lockedCard,
                 ]}
-                onPress={() => unlocked && selectCharacter(reward.id)}
+                onPress={() => unlocked && handleCharacterSelect(reward.id)}
                 disabled={!unlocked}
               >
                 <Image
                   source={{ uri: reward.image_url }}
                   style={styles.characterImage}
-                  contentFit="cover"
+                  contentFit="contain"
                   transition={200}
                   placeholder={require('../assets/default-avatar.png')}
                 />
+                {!unlocked && (
+                  <View style={styles.lockOverlay} />
+                )}
                 <Text style={styles.characterName}>{reward.name}</Text>
                 {!unlocked ? (
                   <View style={styles.lockInfo}>
@@ -146,30 +154,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginHorizontal: -8,
+    gap: 16,
+    paddingHorizontal: 8,
   },
   characterCard: {
-    width: '50%',
+    width: '47%',
     backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
-    marginBottom: 16,
+    marginBottom: 0,
     paddingHorizontal: 8,
   },
   selectedCard: {
     borderColor: colors.primary,
   },
   lockedCard: {
-    opacity: 0.7,
+    opacity: 0.5,
+    backgroundColor: colors.cardBackground,
+    position: 'relative',
   },
   characterImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
     marginBottom: 8,
+    backgroundColor: 'transparent',
   },
   characterName: {
     fontSize: 16,
@@ -195,5 +206,14 @@ const styles = StyleSheet.create({
   unlockedText: {
     fontSize: 14,
     color: colors.success,
+  },
+  lockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 12,
   },
 }); 
