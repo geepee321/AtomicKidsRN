@@ -1,0 +1,1 @@
+[33m14f2ca6[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m feat(rewards): enhance character selection UI and UX - Add padding between tiles, improve locked appearance, auto-navigate to home, adjust image display

@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native'
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native'
 import { Text, IconButton, Card, Checkbox, SegmentedButtons } from 'react-native-paper'
 import { router } from 'expo-router'
 import { useAuth } from '../../context/auth'
@@ -11,32 +11,43 @@ import ParentModeModal from '../../components/ParentModeModal'
 import CelebrationModal from '../../components/CelebrationModal'
 import { CharactersTile } from '../../components/CharactersTile'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler'
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring,
+  runOnJS 
+} from 'react-native-reanimated'
 
 const DEFAULT_ICON = 'checkbox-blank-circle-outline'
 const GIPHY_API_KEY = 'fgUc6JXoNLhz9vJnqkLq1h8r7NGY73JL'
+const SWIPE_THRESHOLD = 100
 
 export default function HomeScreen() {
   const { user, isParentMode, setParentMode } = useAuth()
   const { tasks, updateTask } = useTasks()
   const { children, updateStreak } = useChildren()
-  const { rewards, refreshRewards } = useRewards()
+  const { rewards, refreshRewards, setActiveChild } = useRewards()
   const [selectedChild, setSelectedChild] = useState('')
   const [parentModeModalVisible, setParentModeModalVisible] = useState(false)
   const [celebrationGif, setCelebrationGif] = useState('')
   const [showCelebration, setShowCelebration] = useState(false)
+  const translateX = useSharedValue(0)
 
   // Set first child as selected when children load
   useEffect(() => {
     if (children.length > 0 && !selectedChild) {
       setSelectedChild(children[0].id)
+      setActiveChild(children[0].id)
     }
   }, [children])
 
   useEffect(() => {
     if (selectedChild) {
-      refreshRewards(selectedChild);
+      setActiveChild(selectedChild)
+      refreshRewards(selectedChild)
     }
-  }, [selectedChild]);
+  }, [selectedChild])
 
   const handleParentModeSuccess = async () => {
     setParentModeModalVisible(false)
@@ -136,86 +147,118 @@ export default function HomeScreen() {
     return selectedCharacter?.image_url;
   };
 
-  return (
-    <View style={styles.container}>
+  const switchToNextChild = () => {
+    const currentIndex = children.findIndex(child => child.id === selectedChild)
+    if (currentIndex < children.length - 1) {
+      setSelectedChild(children[currentIndex + 1].id)
+    }
+  }
 
+  const switchToPreviousChild = () => {
+    const currentIndex = children.findIndex(child => child.id === selectedChild)
+    if (currentIndex > 0) {
+      setSelectedChild(children[currentIndex - 1].id)
+    }
+  }
+
+  const gesture = Gesture.Pan()
+    .onUpdate((e) => {
+      translateX.value = e.translationX
+    })
+    .onEnd((e) => {
+      if (e.translationX > SWIPE_THRESHOLD) {
+        runOnJS(switchToPreviousChild)()
+      } else if (e.translationX < -SWIPE_THRESHOLD) {
+        runOnJS(switchToNextChild)()
+      }
+      translateX.value = withSpring(0)
+    })
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }]
+  }))
+
+  return (
+    <GestureHandlerRootView style={styles.container}>
       {children.length > 0 ? (
         <>
-          <View style={styles.childSelector}>
-            {children.map(child => {
-              const avatarUrl = getChildAvatar(child.id);
-              return (
-                <Card 
-                  key={child.id}
-                  style={[
-                    styles.childCard,
-                    selectedChild === child.id && styles.selectedChildCard
-                  ]}
-                  onPress={() => setSelectedChild(child.id)}
-                >
-                  <Card.Content style={styles.childContent}>
-                    <Text variant="titleMedium">{child.name}</Text>
-                  </Card.Content>
-                </Card>
-              );
-            })}
-          </View>
+          <GestureDetector gesture={gesture}>
+            <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+              <View style={styles.childSelector}>
+                {children.map(child => {
+                  const avatarUrl = getChildAvatar(child.id);
+                  return (
+                    <Card 
+                      key={child.id}
+                      style={[
+                        styles.childCard,
+                        selectedChild === child.id && styles.selectedChildCard
+                      ]}
+                      onPress={() => setSelectedChild(child.id)}
+                    >
+                      <Card.Content style={styles.childContent}>
+                        <Text variant="titleMedium">{child.name}</Text>
+                      </Card.Content>
+                    </Card>
+                  );
+                })}
+              </View>
 
-          <CharactersTile selectedChildId={selectedChild} />
-          
-          <View style={styles.statsSection}>
-            <View style={styles.statBox}>
-              <Text variant="titleSmall" style={styles.statLabel}>Today's Tasks</Text>
-              <Text variant="headlineMedium" style={styles.statValue}>
-                {filteredTasks.filter(t => t.completed).length} out of {filteredTasks.length}
-              </Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text variant="titleSmall" style={styles.statLabel}>Streak</Text>
-              <Text variant="headlineMedium" style={styles.statValue}>
-                {selectedChildData?.streak || 0} <Text style={styles.statUnit}>days</Text>
-              </Text>
-            </View>
-          </View>
+              <CharactersTile selectedChildId={selectedChild} />
+              
+              <View style={styles.statsSection}>
+                <View style={styles.statBox}>
+                  <Text variant="titleSmall" style={styles.statLabel}>Today's Tasks</Text>
+                  <Text variant="headlineMedium" style={styles.statValue}>
+                    {filteredTasks.filter(t => t.completed).length} out of {filteredTasks.length}
+                  </Text>
+                </View>
+                <View style={styles.statBox}>
+                  <Text variant="titleSmall" style={styles.statLabel}>Streak</Text>
+                  <Text variant="headlineMedium" style={styles.statValue}>
+                    {selectedChildData?.streak || 0} <Text style={styles.statUnit}>days</Text>
+                  </Text>
+                </View>
+              </View>
 
-
-
-          <ScrollView style={styles.content}>
+              <ScrollView style={styles.content}>
                         
-            {filteredTasks.length === 0 ? (
-              <Text style={styles.emptyText}>No tasks available</Text>
-            ) : (
-              filteredTasks.map((task) => (
-                <Card 
-                  key={task.id}
-                  style={[
-                    styles.taskCard,
-                    task.completed && styles.completedTask
-                  ]}
-                  onPress={() => handleToggleComplete(task.id, task.completed)}
-                >
-                  <Card.Content style={styles.taskContent}>
-                    <View style={styles.taskIcon}>
-                      {task.completed ? (
-                        <IconButton icon="check" size={24} iconColor="#fff" />
-                      ) : (
-                        <View style={styles.iconContainer}>
-                          <MaterialCommunityIcons
-                            name={(task.icon_name || DEFAULT_ICON) as any}
-                            size={28}
-                            color="#666"
-                          />
+                {filteredTasks.length === 0 ? (
+                  <Text style={styles.emptyText}>No tasks available</Text>
+                ) : (
+                  filteredTasks.map((task) => (
+                    <Card 
+                      key={task.id}
+                      style={[
+                        styles.taskCard,
+                        task.completed && styles.completedTask
+                      ]}
+                      onPress={() => handleToggleComplete(task.id, task.completed)}
+                    >
+                      <Card.Content style={styles.taskContent}>
+                        <View style={styles.taskIcon}>
+                          {task.completed ? (
+                            <IconButton icon="check" size={24} iconColor="#fff" />
+                          ) : (
+                            <View style={styles.iconContainer}>
+                              <MaterialCommunityIcons
+                                name={(task.icon_name || DEFAULT_ICON) as any}
+                                size={28}
+                                color="#666"
+                              />
+                            </View>
+                          )}
                         </View>
-                      )}
-                    </View>
-                    <View style={styles.taskInfo}>
-                      <Text variant="titleLarge">{task.title}</Text>
-                    </View>
-                  </Card.Content>
-                </Card>
-              ))
-            )}
-          </ScrollView>
+                        <View style={styles.taskInfo}>
+                          <Text variant="titleLarge">{task.title}</Text>
+                        </View>
+                      </Card.Content>
+                    </Card>
+                  ))
+                )}
+              </ScrollView>
+            </Animated.View>
+          </GestureDetector>
         </>
       ) : (
         <Text style={styles.emptyText}>No children added yet</Text>
@@ -238,7 +281,7 @@ export default function HomeScreen() {
         onDismiss={() => setShowCelebration(false)}
         gifUrl={celebrationGif}
       />
-    </View>
+    </GestureHandlerRootView>
   )
 }
 

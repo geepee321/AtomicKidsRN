@@ -59,18 +59,41 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
     try {
       setError(null)
       const maxOrder = Math.max(...children.map(c => c.order), -1) + 1
+
+      // First, get the default reward (streak requirement 0)
+      const { data: defaultReward, error: rewardError } = await supabase
+        .from('rewards')
+        .select('id')
+        .eq('streak_requirement', 0)
+        .single()
+
+      if (rewardError) throw rewardError
+
+      // Create the child with the default reward as selected character
       const { data, error: insertError } = await supabase
         .from('children')
         .insert([{ 
           name, 
           user_id: user?.id,
           avatar_id: '1', // Default avatar
-          order: maxOrder
+          order: maxOrder,
+          selected_character_id: defaultReward.id // Set default character
         }])
         .select()
         .single()
 
       if (insertError) throw insertError
+
+      // Unlock the default reward for the child
+      const { error: unlockError } = await supabase
+        .from('child_rewards')
+        .insert([{
+          child_id: data.id,
+          reward_id: defaultReward.id,
+          unlocked_at: new Date().toISOString()
+        }])
+
+      if (unlockError) throw unlockError
 
       setChildren(prev => [...prev, data])
     } catch (err) {

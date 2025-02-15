@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRewards } from '../contexts/RewardsContext';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '@/theme/colors';
 import { useChildren } from '../context/children';
+import { Image } from 'expo-image';
 
 export const CharactersTile = ({ selectedChildId }: { selectedChildId: string }) => {
   const { rewards, unlockedRewards, selectedCharacterId, refreshRewards } = useRewards();
@@ -41,11 +42,18 @@ export const CharactersTile = ({ selectedChildId }: { selectedChildId: string })
       </View>
 
       <View style={styles.content}>
-        {selectedCharacter && (
+        {selectedCharacter ? (
           <Image
             source={{ uri: selectedCharacter.image_url }}
             style={styles.selectedCharacter}
+            contentFit="contain"
+            placeholder={require('../assets/default-avatar.png')}
+            transition={200}
           />
+        ) : (
+          <View style={[styles.selectedCharacter, styles.placeholderAvatar]}>
+            <MaterialCommunityIcons name="account" size={32} color={colors.textSecondary} />
+          </View>
         )}
         
         <View style={styles.info}>
@@ -113,5 +121,10 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.primary,
     borderRadius: 3,
+  },
+  placeholderAvatar: {
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 

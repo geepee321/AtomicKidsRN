@@ -21,7 +21,9 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const fetchRewards = async (childId?: string) => {
     const targetChildId = childId || activeChildId;
-    if (!session || !targetChildId) return;
+    if (!session || !targetChildId) {
+      return;
+    }
     
     try {
       setIsLoading(true);

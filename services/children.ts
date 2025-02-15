@@ -19,7 +19,6 @@ export async function createChild(userId: string, input: CreateChildInput): Prom
       {
         user_id: userId,
         name: input.name,
-        avatar_id: input.avatar_id,
       },
     ])
     .select()
