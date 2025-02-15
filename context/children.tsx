@@ -11,6 +11,7 @@ export interface Child {
   created_at: string
   updated_at: string
   last_completed_at: string | null
+  order: number
 }
 
 type ChildrenContextType = {
@@ -22,6 +23,7 @@ type ChildrenContextType = {
   updateChild: (id: string, name: string) => Promise<void>
   deleteChild: (id: string) => Promise<void>
   updateStreak: (id: string, increment: boolean) => Promise<void>
+  reorderChildren: (children: Child[]) => Promise<void>
 }
 
 const ChildrenContext = createContext<ChildrenContextType | undefined>(undefined)
@@ -41,7 +43,7 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
         .from('children')
         .select('*')
         .eq('user_id', user?.id)
-        .order('created_at', { ascending: true })
+        .order('order', { ascending: true })
 
       if (fetchError) throw fetchError
 
@@ -56,12 +58,14 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
   const addChild = async (name: string) => {
     try {
       setError(null)
+      const maxOrder = Math.max(...children.map(c => c.order), -1) + 1
       const { data, error: insertError } = await supabase
         .from('children')
         .insert([{ 
           name, 
           user_id: user?.id,
-          avatar_id: '1' // Default avatar
+          avatar_id: '1', // Default avatar
+          order: maxOrder
         }])
         .select()
         .single()
@@ -186,6 +190,63 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
     }
   }
 
+  const reorderChildren = async (reorderedChildren: Child[]) => {
+    try {
+      setError(null)
+      if (!user?.id) return;
+      
+      // First assign temporary high orders to avoid conflicts
+      const tempUpdates = reorderedChildren.map((child, index) => ({
+        id: child.id,
+        order: 1000000 + index // Use high temporary values
+      }))
+
+      console.log('Setting temporary orders:', tempUpdates)
+      const { error: tempError } = await supabase
+        .from('children')
+        .update({ order: tempUpdates[0].order })
+        .eq('id', tempUpdates[0].id)
+
+      if (tempError) {
+        console.error('Error setting temporary orders:', tempError)
+        throw tempError
+      }
+
+      // Update remaining children one by one to avoid conflicts
+      for (let i = 1; i < tempUpdates.length; i++) {
+        const { error } = await supabase
+          .from('children')
+          .update({ order: tempUpdates[i].order })
+          .eq('id', tempUpdates[i].id)
+        
+        if (error) {
+          console.error(`Error setting temporary order for child ${i}:`, error)
+          throw error
+        }
+      }
+
+      // Then set the final orders one by one
+      for (let i = 0; i < reorderedChildren.length; i++) {
+        const { error } = await supabase
+          .from('children')
+          .update({ order: i })
+          .eq('id', reorderedChildren[i].id)
+        
+        if (error) {
+          console.error(`Error setting final order for child ${i}:`, error)
+          throw error
+        }
+      }
+
+      console.log('Order updated successfully')
+      setChildren(reorderedChildren)
+    } catch (err) {
+      console.error('Error in reorderChildren:', err)
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      throw err
+    }
+  }
+
   useEffect(() => {
     if (user) {
       refreshChildren()
@@ -202,7 +263,8 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
         addChild,
         updateChild,
         deleteChild,
-        updateStreak
+        updateStreak,
+        reorderChildren
       }}
     >
       {childrenProp}

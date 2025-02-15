@@ -1,14 +1,21 @@
 import React from 'react'
-import { View, StyleSheet, FlatList } from 'react-native'
+import { View, StyleSheet } from 'react-native'
 import { Button, List, FAB, Text, IconButton, ActivityIndicator } from 'react-native-paper'
 import { router } from 'expo-router'
 import { useChildren, Child } from '@/context/children'
 import { useRewards } from '@/contexts/RewardsContext'
 import { colors } from '@/theme/colors'
 import { Image } from 'expo-image'
+import DraggableFlatList, { 
+  ScaleDecorator,
+  OpacityDecorator,
+  ShadowDecorator,
+  RenderItemParams
+} from 'react-native-draggable-flatlist'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 export default function ChildrenScreen() {
-  const { children, loading } = useChildren()
+  const { children, loading, reorderChildren } = useChildren()
   const { rewards } = useRewards()
 
   if (loading) {
@@ -25,35 +32,47 @@ export default function ChildrenScreen() {
     return selectedCharacter?.image_url;
   };
 
-  const renderChild = ({ item: child }: { item: Child }) => (
-    <List.Item
-      title={child.name}
-      style={styles.childItem}
-      contentStyle={styles.listItemContent}
-      titleStyle={styles.childName}
-      left={props => (
-        <View style={styles.avatarContainer}>
-          <Image
-            source={{ uri: getChildAvatar(child) }}
-            style={styles.avatar}
-            contentFit="cover"
-            placeholder={require('../../../../assets/default-avatar.png')}
+  const renderChild = ({ item: child, drag, isActive }: RenderItemParams<Child>) => (
+    <ScaleDecorator>
+      <OpacityDecorator>
+        <ShadowDecorator>
+          <List.Item
+            title={child.name}
+            style={[styles.childItem, isActive && styles.activeItem]}
+            contentStyle={styles.listItemContent}
+            titleStyle={styles.childName}
+            onLongPress={drag}
+            left={props => (
+              <View style={styles.avatarContainer}>
+                <IconButton
+                  icon="drag"
+                  size={24}
+                  onPress={drag}
+                />
+                <Image
+                  source={{ uri: getChildAvatar(child) }}
+                  style={styles.avatar}
+                  contentFit="cover"
+                  placeholder={require('../../../../assets/default-avatar.png')}
+                />
+              </View>
+            )}
+            right={props => (
+              <IconButton
+                icon="chevron-right"
+                size={24}
+                onPress={() => router.push(`/(app)/(parent)/children/${child.id}`)}
+              />
+            )}
+            onPress={() => router.push(`/(app)/(parent)/children/${child.id}`)}
           />
-        </View>
-      )}
-      right={props => (
-        <IconButton
-          icon="chevron-right"
-          size={24}
-          onPress={() => router.push(`/(app)/(parent)/children/${child.id}`)}
-        />
-      )}
-      onPress={() => router.push(`/(app)/(parent)/children/${child.id}`)}
-    />
+        </ShadowDecorator>
+      </OpacityDecorator>
+    </ScaleDecorator>
   )
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       {children.length === 0 ? (
         <View style={styles.emptyState}>
           <Text variant="bodyLarge" style={styles.emptyText}>
@@ -70,10 +89,11 @@ export default function ChildrenScreen() {
         </View>
       ) : (
         <>
-          <FlatList
+          <DraggableFlatList
             data={children}
-            renderItem={renderChild}
+            onDragEnd={({ data }) => reorderChildren(data)}
             keyExtractor={(item) => item.id}
+            renderItem={renderChild}
             contentContainerStyle={styles.list}
           />
           <FAB
@@ -83,7 +103,7 @@ export default function ChildrenScreen() {
           />
         </>
       )}
-    </View>
+    </GestureHandlerRootView>
   )
 }
 
@@ -120,6 +140,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
+  activeItem: {
+    backgroundColor: colors.cardBackground,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
   childName: {
     fontSize: 16,
   },
@@ -129,7 +157,8 @@ const styles = StyleSheet.create({
   avatarContainer: {
     paddingLeft: 16,
     paddingRight: 8,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   avatar: {
     width: 40,
