@@ -1,16 +1,25 @@
 import { View, StyleSheet } from 'react-native'
 import { Button, TextInput, Text } from 'react-native-paper'
-import { useState } from 'react'
-import { router } from 'expo-router'
+import { useState, useEffect } from 'react'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useChildren } from '@/context/children'
 
-export default function NewChildScreen() {
-  const { addChild } = useChildren()
+export default function EditChildScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const { children, updateChild, deleteChild } = useChildren()
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = async () => {
+  // Find the child and initialize form
+  useEffect(() => {
+    const child = children.find(c => c.id === id)
+    if (child) {
+      setName(child.name)
+    }
+  }, [id, children])
+
+  const handleUpdate = async () => {
     if (!name.trim()) {
       setError('Name is required')
       return
@@ -19,7 +28,20 @@ export default function NewChildScreen() {
     try {
       setLoading(true)
       setError(null)
-      await addChild(name.trim())
+      await updateChild(id, name.trim())
+      router.back()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      await deleteChild(id)
       router.back()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -30,7 +52,7 @@ export default function NewChildScreen() {
 
   return (
     <View style={styles.container}>
-      <Text variant="headlineMedium" style={styles.title}>Add New Child</Text>
+      <Text variant="headlineMedium" style={styles.title}>Edit Child</Text>
 
       <TextInput
         label="Child's Name"
@@ -45,12 +67,23 @@ export default function NewChildScreen() {
 
       <Button
         mode="contained"
-        onPress={handleSubmit}
+        onPress={handleUpdate}
         loading={loading}
         disabled={loading}
         style={styles.button}
       >
-        Create Child Profile
+        Update Child Profile
+      </Button>
+
+      <Button
+        mode="outlined"
+        onPress={handleDelete}
+        loading={loading}
+        disabled={loading}
+        style={[styles.button, styles.deleteButton]}
+        textColor="red"
+      >
+        Delete Child Profile
       </Button>
 
       <Button
@@ -83,5 +116,8 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 8,
+  },
+  deleteButton: {
+    borderColor: 'red',
   },
 }) 

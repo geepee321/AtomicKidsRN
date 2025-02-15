@@ -4,11 +4,20 @@ import { router } from 'expo-router'
 import { useAuth } from '@/context/auth'
 
 export default function ParentDashboard() {
-  const { setParentMode } = useAuth()
+  const { setParentMode, signOut } = useAuth()
 
   const handleBack = async () => {
     await setParentMode(false)
     router.back()
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      router.replace('/auth/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
   }
 
   return (
@@ -38,6 +47,17 @@ export default function ParentDashboard() {
         >
           Manage Tasks
         </Button>
+
+        <View style={styles.spacer} />
+
+        <Button
+          mode="outlined"
+          style={styles.signOutButton}
+          textColor="red"
+          onPress={handleSignOut}
+        >
+          Sign Out
+        </Button>
       </View>
     </View>
   )
@@ -61,5 +81,11 @@ const styles = StyleSheet.create({
   },
   button: {
     marginVertical: 8,
+  },
+  spacer: {
+    flex: 1,
+  },
+  signOutButton: {
+    borderColor: 'red',
   },
 }) 

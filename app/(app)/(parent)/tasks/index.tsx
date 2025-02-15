@@ -163,7 +163,6 @@ export default function TasksScreen() {
             onDragEnd={handleDragEnd}
             keyExtractor={item => item.id}
             renderItem={renderItem}
-            enableLayoutAnimation
             dragItemOverflow={true}
           />
         )}

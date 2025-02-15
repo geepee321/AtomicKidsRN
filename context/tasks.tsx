@@ -9,6 +9,7 @@ type Task = {
   child_id: string | null
   completed: boolean
   completed_at: string | null
+  completion_date: string | null
   created_at: string
   user_id: string
   order: number
@@ -138,6 +139,16 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
   const updateTask = async (id: string, updates: Partial<Task>) => {
     try {
       setError(null)
+
+      // If we're updating completion status, add completion timestamp
+      if ('completed' in updates) {
+        const now = new Date()
+        updates = {
+          ...updates,
+          completed_at: updates.completed ? now.toISOString() : null
+        }
+      }
+
       const { error: updateError } = await supabase
         .from('tasks')
         .update(updates)

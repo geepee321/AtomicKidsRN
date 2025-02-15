@@ -1,5 +1,6 @@
+import React from 'react'
 import { View, StyleSheet, ScrollView } from 'react-native'
-import { Button, Text, List, IconButton, Card, Checkbox, SegmentedButtons } from 'react-native-paper'
+import { Text, IconButton, Card, Checkbox, SegmentedButtons } from 'react-native-paper'
 import { router } from 'expo-router'
 import { useAuth } from '@/context/auth'
 import { useTasks } from '@/context/tasks'
@@ -8,7 +9,7 @@ import { useState, useEffect } from 'react'
 import ParentModeModal from '../../components/ParentModeModal'
 
 export default function HomeScreen() {
-  const { signOut, user, isParentMode, setParentMode } = useAuth()
+  const { user, isParentMode, setParentMode } = useAuth()
   const { tasks, updateTask } = useTasks()
   const { children } = useChildren()
   const [selectedChild, setSelectedChild] = useState('')
@@ -20,15 +21,6 @@ export default function HomeScreen() {
       setSelectedChild(children[0].id)
     }
   }, [children])
-
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      router.replace('/auth/login')
-    } catch (error) {
-      console.error('Error signing out:', error)
-    }
-  }
 
   const handleParentModeSuccess = async () => {
     setParentModeModalVisible(false)
@@ -51,8 +43,7 @@ export default function HomeScreen() {
   const handleToggleComplete = async (taskId: string, currentStatus: boolean) => {
     try {
       await updateTask(taskId, {
-        completed: !currentStatus,
-        completed_at: !currentStatus ? new Date().toISOString() : null
+        completed: !currentStatus
       })
     } catch (error) {
       console.error('Error toggling task completion:', error)
@@ -71,64 +62,87 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <IconButton
-          icon={isParentMode ? 'account-lock' : 'account-lock-outline'}
-          onPress={handleParentModeToggle}
-        />
+        <Text variant="displaySmall" style={styles.title}>
+          Atomic Kids <Text style={styles.emoji}>⚛️ 🚸</Text>
+        </Text>
       </View>
 
       {children.length > 0 ? (
         <>
-          <SegmentedButtons
-            value={selectedChild}
-            onValueChange={setSelectedChild}
-            buttons={childButtons}
-            style={styles.childSelector}
-          />
+          <View style={styles.childSelector}>
+            {children.map(child => (
+              <Card 
+                key={child.id}
+                style={[
+                  styles.childCard,
+                  selectedChild === child.id && styles.selectedChildCard
+                ]}
+                onPress={() => setSelectedChild(child.id)}
+              >
+                <Card.Content style={styles.childContent}>
+                  <Text variant="titleMedium">{child.name}</Text>
+                </Card.Content>
+              </Card>
+            ))}
+          </View>
 
-          <Card style={styles.tasksCard}>
-            <Card.Title title={`Tasks for ${children.find(c => c.id === selectedChild)?.name || ''}`} />
-            <Card.Content>
-              {filteredTasks.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  No tasks available
-                </Text>
-              ) : (
-                <ScrollView>
-                  {filteredTasks.map((task) => (
-                    <List.Item
-                      key={task.id}
-                      title={task.title}
-                      left={props => (
-                        <Checkbox.Android
-                          status={task.completed ? 'checked' : 'unchecked'}
-                          onPress={() => handleToggleComplete(task.id, task.completed)}
-                        />
+          <View style={styles.statsSection}>
+            <View style={styles.statBox}>
+              <Text variant="titleSmall" style={styles.statLabel}>Today's Tasks</Text>
+              <Text variant="headlineMedium" style={styles.statValue}>
+                {filteredTasks.filter(t => t.completed).length} out of {filteredTasks.length}
+              </Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text variant="titleSmall" style={styles.statLabel}>Streak</Text>
+              <Text variant="headlineMedium" style={styles.statValue}>
+                1 <Text style={styles.statUnit}>days</Text>
+              </Text>
+            </View>
+          </View>
+
+          <ScrollView style={styles.taskList}>
+            {filteredTasks.length === 0 ? (
+              <Text style={styles.emptyText}>No tasks available</Text>
+            ) : (
+              filteredTasks.map((task) => (
+                <Card 
+                  key={task.id}
+                  style={[
+                    styles.taskCard,
+                    task.completed && styles.completedTask
+                  ]}
+                >
+                  <Card.Content style={styles.taskContent}>
+                    <View style={styles.taskIcon}>
+                      {task.completed ? (
+                        <IconButton icon="check" size={24} iconColor="#fff" />
+                      ) : (
+                        <IconButton icon="bed-empty" size={24} iconColor="#fff" />
                       )}
-                      style={[
-                        styles.taskItem,
-                        task.completed && styles.completedTask
-                      ]}
+                    </View>
+                    <View style={styles.taskInfo}>
+                      <Text variant="titleLarge">{task.title}</Text>
+                    </View>
+                    <Checkbox.Android
+                      status={task.completed ? 'checked' : 'unchecked'}
+                      onPress={() => handleToggleComplete(task.id, task.completed)}
                     />
-                  ))}
-                </ScrollView>
-              )}
-            </Card.Content>
-          </Card>
+                  </Card.Content>
+                </Card>
+              ))
+            )}
+          </ScrollView>
         </>
       ) : (
         <Text style={styles.emptyText}>No children added yet</Text>
       )}
 
-      <Text style={styles.email}>Signed in as: {user?.email}</Text>
-      
-      <Button 
-        mode="contained" 
-        onPress={handleSignOut}
-        style={styles.button}
-      >
-        Sign Out
-      </Button>
+      <IconButton
+        icon={isParentMode ? 'account-lock' : 'account-lock-outline'}
+        style={styles.parentModeButton}
+        onPress={handleParentModeToggle}
+      />
 
       <ParentModeModal
         visible={parentModeModalVisible}
@@ -143,36 +157,95 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    backgroundColor: '#f5f9ff',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  title: {
+    fontWeight: 'bold',
+  },
+  emoji: {
+    fontWeight: 'normal',
   },
   childSelector: {
-    marginBottom: 20,
+    flexDirection: 'row',
+    marginBottom: 24,
+    gap: 12,
   },
-  tasksCard: {
-    marginBottom: 20,
+  childCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 0,
+    shadowColor: 'transparent',
+    elevation: 0,
   },
-  taskItem: {
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#f5f5f5',
+  selectedChildCard: {
+    backgroundColor: '#e8f0fe',
+    borderColor: '#4285f4',
+    borderWidth: 2,
+    elevation: 0,
+  },
+  childContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    height: 48,
+    justifyContent: 'center',
+  },
+  statsSection: {
+    flexDirection: 'row',
+    marginBottom: 24,
+    gap: 16,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+  },
+  statLabel: {
+    color: '#666',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontWeight: 'bold',
+  },
+  statUnit: {
+    fontSize: 16,
+    color: '#666',
+  },
+  taskList: {
+    flex: 1,
+  },
+  taskCard: {
+    marginBottom: 12,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    elevation: 2,
   },
   completedTask: {
-    opacity: 0.7,
+    backgroundColor: '#34c759',
+  },
+  taskContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  taskIcon: {
+    marginRight: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+  },
+  taskInfo: {
+    flex: 1,
   },
   emptyText: {
     textAlign: 'center',
     opacity: 0.7,
   },
-  email: {
-    fontSize: 16,
-    marginBottom: 20,
-    opacity: 0.7,
-  },
-  button: {
-    marginTop: 20,
+  parentModeButton: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
   },
 }) 

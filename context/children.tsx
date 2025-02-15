@@ -53,7 +53,11 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
       setError(null)
       const { data, error: insertError } = await supabase
         .from('children')
-        .insert([{ name, user_id: user?.id }])
+        .insert([{ 
+          name, 
+          user_id: user?.id,
+          avatar_id: '1' // Default avatar
+        }])
         .select()
         .single()
 
@@ -89,6 +93,16 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
   const deleteChild = async (id: string) => {
     try {
       setError(null)
+      
+      // First, delete all tasks belonging to this child
+      const { error: deleteTasksError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('child_id', id)
+
+      if (deleteTasksError) throw deleteTasksError
+
+      // Then delete the child
       const { error: deleteError } = await supabase
         .from('children')
         .delete()
