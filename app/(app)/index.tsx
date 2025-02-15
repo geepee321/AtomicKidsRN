@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, StyleSheet, ScrollView } from 'react-native'
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { Text, IconButton, Card, Checkbox, SegmentedButtons } from 'react-native-paper'
 import { router } from 'expo-router'
 import { useAuth } from '@/context/auth'
@@ -7,6 +7,9 @@ import { useTasks } from '@/context/tasks'
 import { useChildren } from '@/context/children'
 import { useState, useEffect } from 'react'
 import ParentModeModal from '../../components/ParentModeModal'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+
+const DEFAULT_ICON = 'checkbox-blank-circle-outline'
 
 export default function HomeScreen() {
   const { user, isParentMode, setParentMode } = useAuth()
@@ -61,11 +64,6 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text variant="displaySmall" style={styles.title}>
-          Atomic Kids <Text style={styles.emoji}>⚛️ 🚸</Text>
-        </Text>
-      </View>
 
       {children.length > 0 ? (
         <>
@@ -112,22 +110,25 @@ export default function HomeScreen() {
                     styles.taskCard,
                     task.completed && styles.completedTask
                   ]}
+                  onPress={() => handleToggleComplete(task.id, task.completed)}
                 >
                   <Card.Content style={styles.taskContent}>
                     <View style={styles.taskIcon}>
                       {task.completed ? (
                         <IconButton icon="check" size={24} iconColor="#fff" />
                       ) : (
-                        <IconButton icon="bed-empty" size={24} iconColor="#fff" />
+                        <View style={styles.iconContainer}>
+                          <MaterialCommunityIcons
+                            name={(task.icon_name || DEFAULT_ICON) as any}
+                            size={28}
+                            color="#666"
+                          />
+                        </View>
                       )}
                     </View>
                     <View style={styles.taskInfo}>
                       <Text variant="titleLarge">{task.title}</Text>
                     </View>
-                    <Checkbox.Android
-                      status={task.completed ? 'checked' : 'unchecked'}
-                      onPress={() => handleToggleComplete(task.id, task.completed)}
-                    />
                   </Card.Content>
                 </Card>
               ))
@@ -156,11 +157,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#f5f9ff',
   },
   header: {
     marginBottom: 24,
+    paddingHorizontal: 20,
   },
   title: {
     fontWeight: 'bold',
@@ -172,6 +173,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 24,
     gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   childCard: {
     backgroundColor: '#fff',
@@ -196,6 +199,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 24,
     gap: 16,
+    paddingHorizontal: 20,
   },
   statBox: {
     flex: 1,
@@ -216,12 +220,19 @@ const styles = StyleSheet.create({
   },
   taskList: {
     flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 4,
   },
   taskCard: {
     marginBottom: 12,
+    marginHorizontal: 2,
     borderRadius: 16,
     backgroundColor: '#fff',
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   completedTask: {
     backgroundColor: '#34c759',
@@ -233,8 +244,18 @@ const styles = StyleSheet.create({
   },
   taskIcon: {
     marginRight: 16,
+    width: 40,
+    height: 40,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   taskInfo: {
     flex: 1,
