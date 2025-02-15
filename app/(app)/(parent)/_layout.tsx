@@ -5,24 +5,22 @@ export default function ParentLayout() {
     <Stack 
       screenOptions={{
         headerShown: true,  // Show headers by default
-        headerBackTitleVisible: true,  // Show back button text
-        headerBackTitle: "Home",
         headerBackVisible: true  // Ensure back button is always visible
       }}
     >
       <Stack.Screen 
         name="index"
         options={{
-          title: "Parent Dashboard",
-          headerLargeTitle: false,
-          headerBackVisible: true  // Explicitly enable back button
+          title: "Settings",
+          headerBackTitle: "Home"
         }}
       />
+
       <Stack.Screen 
-        name="children/index"  // Change back to children/index
+        name="children/index"
         options={{
           title: "Children",
-          headerBackTitle: "Dashboard"  // Text shown in back button
+          headerBackTitle: "Settings"
         }}
       />
       <Stack.Screen 
@@ -36,7 +34,7 @@ export default function ParentLayout() {
         name="tasks/index"
         options={{
           title: "Tasks",
-          headerBackTitle: "Dashboard"
+          headerBackTitle: "Settings"
         }}
       />
       <Stack.Screen 

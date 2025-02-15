@@ -21,6 +21,41 @@ serve(async (req) => {
     const sydneyDate = new Date().toLocaleString('en-US', { timeZone: 'Australia/Sydney' })
     const sydneyDateOnly = new Date(sydneyDate).toISOString().split('T')[0]
 
+    // First, get all children and their tasks
+    const { data: children, error: childrenError } = await supabaseClient
+      .from('children')
+      .select(`
+        id,
+        streak,
+        last_completed_at,
+        tasks (
+          id,
+          completed,
+          completed_at
+        )
+      `)
+
+    if (childrenError) throw childrenError
+
+    // Process each child
+    for (const child of children) {
+      const allTasksCompleted = child.tasks.length > 0 && 
+        child.tasks.every((task: any) => task.completed)
+      
+      // If tasks are not all completed, reset streak
+      if (!allTasksCompleted) {
+        const { error: updateError } = await supabaseClient
+          .from('children')
+          .update({
+            streak: 0,
+            last_completed_at: null
+          })
+          .eq('id', child.id)
+
+        if (updateError) throw updateError
+      }
+    }
+
     // Reset all completed tasks
     const { error: updateError } = await supabaseClient
       .from('tasks')
@@ -33,7 +68,7 @@ serve(async (req) => {
     if (updateError) throw updateError
 
     return new Response(
-      JSON.stringify({ message: 'Tasks reset successfully' }),
+      JSON.stringify({ message: 'Tasks and streaks reset successfully' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

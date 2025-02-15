@@ -20,16 +20,13 @@ export default function ParentDashboard() {
     }
   }
 
+  const handleGoHome = async () => {
+    await setParentMode(false)
+    router.back()
+  }
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <IconButton
-          icon="arrow-left"
-          onPress={handleBack}
-          size={24}
-        />
-        <Text variant="headlineMedium">Parent Dashboard</Text>
-      </View>
       
       <View style={styles.content}>
         <Button
@@ -48,6 +45,14 @@ export default function ParentDashboard() {
           Manage Tasks
         </Button>
 
+        <Button
+          mode="outlined"
+          style={styles.button}
+          onPress={handleGoHome}
+        >
+          Return to dashboard
+        </Button>
+
         <View style={styles.spacer} />
 
         <Button
@@ -56,7 +61,7 @@ export default function ParentDashboard() {
           textColor="red"
           onPress={handleSignOut}
         >
-          Sign Out
+          Sign Out Parent
         </Button>
       </View>
     </View>

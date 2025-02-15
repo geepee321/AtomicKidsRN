@@ -7,6 +7,8 @@ type Child = {
   name: string
   created_at: string
   user_id: string
+  streak: number
+  last_completed_at: string | null
 }
 
 type ChildrenContextType = {
@@ -17,6 +19,7 @@ type ChildrenContextType = {
   addChild: (name: string) => Promise<void>
   updateChild: (id: string, name: string) => Promise<void>
   deleteChild: (id: string) => Promise<void>
+  updateStreak: (id: string, increment: boolean) => Promise<void>
 }
 
 const ChildrenContext = createContext<ChildrenContextType | undefined>(undefined)
@@ -118,6 +121,39 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
     }
   }
 
+  const updateStreak = async (id: string, increment: boolean) => {
+    try {
+      setError(null)
+      const child = children.find(c => c.id === id)
+      if (!child) return
+
+      const newStreak = increment ? (child.streak + 1) : 0
+      const now = new Date().toISOString()
+
+      const { error: updateError } = await supabase
+        .from('children')
+        .update({ 
+          streak: newStreak,
+          last_completed_at: increment ? now : null
+        })
+        .eq('id', id)
+        .eq('user_id', user?.id)
+
+      if (updateError) throw updateError
+
+      setChildren(prev => prev.map(child => 
+        child.id === id ? { 
+          ...child, 
+          streak: newStreak,
+          last_completed_at: increment ? now : null
+        } : child
+      ))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      throw err
+    }
+  }
+
   useEffect(() => {
     if (user) {
       refreshChildren()
@@ -133,7 +169,8 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
         refreshChildren, 
         addChild,
         updateChild,
-        deleteChild
+        deleteChild,
+        updateStreak
       }}
     >
       {childrenProp}

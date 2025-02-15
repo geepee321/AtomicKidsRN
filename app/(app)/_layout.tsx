@@ -5,8 +5,7 @@ export default function AppLayout() {
     <Stack 
       screenOptions={{
         headerShown: true,  // Show headers by default
-        headerBackVisible: true,
-        headerBackTitleVisible: true
+        headerBackVisible: true
       }}
     >
       <Stack.Screen
@@ -19,8 +18,7 @@ export default function AppLayout() {
       <Stack.Screen
         name="(parent)"
         options={{
-          headerShown: false,
-          headerBackTitle: "Home"
+          headerShown: false  // Hide header for parent section since it will be handled by parent layout
         }}
       />
     </Stack>

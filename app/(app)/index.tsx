@@ -7,16 +7,20 @@ import { useTasks } from '@/context/tasks'
 import { useChildren } from '@/context/children'
 import { useState, useEffect } from 'react'
 import ParentModeModal from '../../components/ParentModeModal'
+import CelebrationModal from '../../components/CelebrationModal'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 const DEFAULT_ICON = 'checkbox-blank-circle-outline'
+const GIPHY_API_KEY = 'fgUc6JXoNLhz9vJnqkLq1h8r7NGY73JL'
 
 export default function HomeScreen() {
   const { user, isParentMode, setParentMode } = useAuth()
   const { tasks, updateTask } = useTasks()
-  const { children } = useChildren()
+  const { children, updateStreak } = useChildren()
   const [selectedChild, setSelectedChild] = useState('')
   const [parentModeModalVisible, setParentModeModalVisible] = useState(false)
+  const [celebrationGif, setCelebrationGif] = useState('')
+  const [showCelebration, setShowCelebration] = useState(false)
 
   // Set first child as selected when children load
   useEffect(() => {
@@ -43,11 +47,78 @@ export default function HomeScreen() {
     }
   }
 
+  const fetchRandomGif = async () => {
+    try {
+      const response = await fetch(
+        `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=celebration+party+yay&limit=50&rating=g`
+      )
+      const data = await response.json()
+      if (data.data && data.data.length > 0) {
+        const randomIndex = Math.floor(Math.random() * data.data.length)
+        return data.data[randomIndex].images.original.url
+      }
+    } catch (error) {
+      console.error('Error fetching GIF:', error)
+    }
+    return null
+  }
+
   const handleToggleComplete = async (taskId: string, currentStatus: boolean) => {
     try {
       await updateTask(taskId, {
         completed: !currentStatus
       })
+
+      // Show celebration GIF when completing a task
+      if (!currentStatus) {
+        const gifUrl = await fetchRandomGif()
+        if (gifUrl) {
+          setCelebrationGif(gifUrl)
+          setShowCelebration(true)
+          // Auto-hide after 2 seconds
+          setTimeout(() => {
+            setShowCelebration(false)
+          }, 5000)
+        }
+      }
+
+      if (selectedChild) {
+        const childTasks = tasks.filter(task => task.child_id === selectedChild)
+        const allCompleted = childTasks.every(task => 
+          task.id === taskId ? !currentStatus : task.completed
+        )
+        const child = children.find(c => c.id === selectedChild)
+        if (!child) return
+
+        if (allCompleted && !currentStatus) {  // Completing the last task
+          // Get Sydney's current date for comparison
+          const sydneyDate = new Date().toLocaleString('en-US', { timeZone: 'Australia/Sydney' })
+          const lastCompletedAt = child.last_completed_at 
+            ? new Date(child.last_completed_at).toLocaleString('en-US', { timeZone: 'Australia/Sydney' })
+            : null
+          
+          // Compare dates in Sydney timezone
+          const isNewDay = !lastCompletedAt || 
+            new Date(lastCompletedAt).toDateString() !== new Date(sydneyDate).toDateString()
+
+          // Only increment streak if it hasn't been incremented today
+          if (isNewDay) {
+            await updateStreak(selectedChild, true)
+          }
+        } else if (!allCompleted && currentStatus) {  // Uncompleting a task when all were completed
+          // Check if this was the last task completed today
+          const lastCompletedAt = child.last_completed_at 
+            ? new Date(child.last_completed_at).toLocaleString('en-US', { timeZone: 'Australia/Sydney' })
+            : null
+          const sydneyDate = new Date().toLocaleString('en-US', { timeZone: 'Australia/Sydney' })
+          
+          // If this was completed today and we're breaking the streak, reset it
+          if (lastCompletedAt && 
+              new Date(lastCompletedAt).toDateString() === new Date(sydneyDate).toDateString()) {
+            await updateStreak(selectedChild, false)
+          }
+        }
+      }
     } catch (error) {
       console.error('Error toggling task completion:', error)
     }
@@ -61,6 +132,8 @@ export default function HomeScreen() {
   const filteredTasks = tasks.filter(task => 
     task.child_id === selectedChild
   )
+
+  const selectedChildData = children.find(child => child.id === selectedChild)
 
   return (
     <View style={styles.container}>
@@ -94,7 +167,7 @@ export default function HomeScreen() {
             <View style={styles.statBox}>
               <Text variant="titleSmall" style={styles.statLabel}>Streak</Text>
               <Text variant="headlineMedium" style={styles.statValue}>
-                1 <Text style={styles.statUnit}>days</Text>
+                {selectedChildData?.streak || 0} <Text style={styles.statUnit}>days</Text>
               </Text>
             </View>
           </View>
@@ -140,7 +213,7 @@ export default function HomeScreen() {
       )}
 
       <IconButton
-        icon={isParentMode ? 'account-lock' : 'account-lock-outline'}
+        icon={isParentMode ? 'cog' : 'cog'}
         style={styles.parentModeButton}
         onPress={handleParentModeToggle}
       />
@@ -149,6 +222,12 @@ export default function HomeScreen() {
         visible={parentModeModalVisible}
         onDismiss={() => setParentModeModalVisible(false)}
         onSuccess={handleParentModeSuccess}
+      />
+
+      <CelebrationModal
+        visible={showCelebration}
+        onDismiss={() => setShowCelebration(false)}
+        gifUrl={celebrationGif}
       />
     </View>
   )
