@@ -1,13 +1,15 @@
 import React from 'react'
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native'
 import { Text, IconButton, Card, Checkbox, SegmentedButtons } from 'react-native-paper'
 import { router } from 'expo-router'
-import { useAuth } from '@/context/auth'
-import { useTasks } from '@/context/tasks'
-import { useChildren } from '@/context/children'
+import { useAuth } from '../../context/auth'
+import { useTasks } from '../../context/tasks'
+import { useChildren } from '../../context/children'
+import { useRewards } from '../../contexts/RewardsContext'
 import { useState, useEffect } from 'react'
 import ParentModeModal from '../../components/ParentModeModal'
 import CelebrationModal from '../../components/CelebrationModal'
+import { CharactersTile } from '../../components/CharactersTile'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 const DEFAULT_ICON = 'checkbox-blank-circle-outline'
@@ -17,6 +19,7 @@ export default function HomeScreen() {
   const { user, isParentMode, setParentMode } = useAuth()
   const { tasks, updateTask } = useTasks()
   const { children, updateStreak } = useChildren()
+  const { rewards, refreshRewards } = useRewards()
   const [selectedChild, setSelectedChild] = useState('')
   const [parentModeModalVisible, setParentModeModalVisible] = useState(false)
   const [celebrationGif, setCelebrationGif] = useState('')
@@ -63,66 +66,50 @@ export default function HomeScreen() {
     return null
   }
 
-  const handleToggleComplete = async (taskId: string, currentStatus: boolean) => {
+  const handleToggleComplete = async (taskId: string, currentlyCompleted: boolean) => {
     try {
-      await updateTask(taskId, {
-        completed: !currentStatus
-      })
+      // Update task completion status
+      await updateTask(taskId, { completed: !currentlyCompleted });
 
-      // Show celebration GIF when completing a task
-      if (!currentStatus) {
-        const gifUrl = await fetchRandomGif()
-        if (gifUrl) {
-          setCelebrationGif(gifUrl)
-          setShowCelebration(true)
-          // Auto-hide after 2 seconds
-          setTimeout(() => {
-            setShowCelebration(false)
-          }, 5000)
-        }
-      }
+      // If completing all tasks for the day, increment streak
+      if (!currentlyCompleted) {
+        const childTasks = tasks.filter(t => t.child_id === selectedChild);
+        const allOtherTasksCompleted = childTasks
+          .filter(t => t.id !== taskId)
+          .every(t => t.completed);
 
-      if (selectedChild) {
-        const childTasks = tasks.filter(task => task.child_id === selectedChild)
-        const allCompleted = childTasks.every(task => 
-          task.id === taskId ? !currentStatus : task.completed
-        )
-        const child = children.find(c => c.id === selectedChild)
-        if (!child) return
-
-        if (allCompleted && !currentStatus) {  // Completing the last task
-          // Get Sydney's current date for comparison
-          const sydneyDate = new Date().toLocaleString('en-US', { timeZone: 'Australia/Sydney' })
-          const lastCompletedAt = child.last_completed_at 
-            ? new Date(child.last_completed_at).toLocaleString('en-US', { timeZone: 'Australia/Sydney' })
-            : null
+        if (allOtherTasksCompleted) {
+          const selectedChildData = children.find(child => child.id === selectedChild);
           
-          // Compare dates in Sydney timezone
-          const isNewDay = !lastCompletedAt || 
-            new Date(lastCompletedAt).toDateString() !== new Date(sydneyDate).toDateString()
-
-          // Only increment streak if it hasn't been incremented today
-          if (isNewDay) {
-            await updateStreak(selectedChild, true)
-          }
-        } else if (!allCompleted && currentStatus) {  // Uncompleting a task when all were completed
-          // Check if this was the last task completed today
-          const lastCompletedAt = child.last_completed_at 
-            ? new Date(child.last_completed_at).toLocaleString('en-US', { timeZone: 'Australia/Sydney' })
-            : null
-          const sydneyDate = new Date().toLocaleString('en-US', { timeZone: 'Australia/Sydney' })
+          // Check if streak was already incremented today
+          const lastCompletedAt = selectedChildData?.last_completed_at;
+          const today = new Date();
+          const lastCompletedDate = lastCompletedAt ? new Date(lastCompletedAt) : null;
           
-          // If this was completed today and we're breaking the streak, reset it
-          if (lastCompletedAt && 
-              new Date(lastCompletedAt).toDateString() === new Date(sydneyDate).toDateString()) {
-            await updateStreak(selectedChild, false)
+          // Only increment streak if not already completed today
+          if (!lastCompletedDate || 
+              lastCompletedDate.toDateString() !== today.toDateString()) {
+            await updateStreak(selectedChild, true);
+            await refreshRewards(selectedChild);
+            
+            // Fetch a celebration GIF
+            try {
+              const response = await fetch(
+                `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=celebration&rating=g`
+              );
+              const data = await response.json();
+              setCelebrationGif(data.data.images.original.url);
+              setShowCelebration(true);
+            } catch (error) {
+              console.error('Error fetching celebration GIF:', error);
+            }
           }
         }
       }
     } catch (error) {
-      console.error('Error toggling task completion:', error)
+      console.error('Error toggling task completion:', error);
     }
-  }
+  };
 
   const childButtons = children.map(child => ({
     value: child.id,
@@ -135,28 +122,41 @@ export default function HomeScreen() {
 
   const selectedChildData = children.find(child => child.id === selectedChild)
 
+  const getChildAvatar = (childId: string): string | undefined => {
+    const child = children.find(c => c.id === childId);
+    if (!child || !child.selected_character_id) return undefined;
+    
+    const selectedCharacter = rewards.find(r => r.id === child.selected_character_id);
+    return selectedCharacter?.image_url;
+  };
+
   return (
     <View style={styles.container}>
 
       {children.length > 0 ? (
         <>
           <View style={styles.childSelector}>
-            {children.map(child => (
-              <Card 
-                key={child.id}
-                style={[
-                  styles.childCard,
-                  selectedChild === child.id && styles.selectedChildCard
-                ]}
-                onPress={() => setSelectedChild(child.id)}
-              >
-                <Card.Content style={styles.childContent}>
-                  <Text variant="titleMedium">{child.name}</Text>
-                </Card.Content>
-              </Card>
-            ))}
+            {children.map(child => {
+              const avatarUrl = getChildAvatar(child.id);
+              return (
+                <Card 
+                  key={child.id}
+                  style={[
+                    styles.childCard,
+                    selectedChild === child.id && styles.selectedChildCard
+                  ]}
+                  onPress={() => setSelectedChild(child.id)}
+                >
+                  <Card.Content style={styles.childContent}>
+                    <Text variant="titleMedium">{child.name}</Text>
+                  </Card.Content>
+                </Card>
+              );
+            })}
           </View>
 
+          <CharactersTile selectedChildId={selectedChild} />
+          
           <View style={styles.statsSection}>
             <View style={styles.statBox}>
               <Text variant="titleSmall" style={styles.statLabel}>Today's Tasks</Text>
@@ -172,7 +172,10 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <ScrollView style={styles.taskList}>
+
+
+          <ScrollView style={styles.content}>
+                        
             {filteredTasks.length === 0 ? (
               <Text style={styles.emptyText}>No tasks available</Text>
             ) : (
@@ -269,10 +272,17 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   childContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
     height: 48,
-    justifyContent: 'center',
+  },
+  childAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
   },
   statsSection: {
     flexDirection: 'row',
@@ -297,7 +307,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  taskList: {
+  content: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 4,

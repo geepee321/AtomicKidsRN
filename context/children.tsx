@@ -1,13 +1,15 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './auth'
 
-type Child = {
+export interface Child {
   id: string
   name: string
-  created_at: string
-  user_id: string
+  parent_id: string
   streak: number
+  selected_character_id: string | null
+  created_at: string
+  updated_at: string
   last_completed_at: string | null
 }
 
@@ -140,6 +142,36 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
         .eq('user_id', user?.id)
 
       if (updateError) throw updateError
+
+      // If streak increased, check for and unlock new rewards
+      if (increment) {
+        const { data: rewards, error: rewardsError } = await supabase
+          .from('rewards')
+          .select('*')
+          .lte('streak_requirement', newStreak)
+          .order('streak_requirement', { ascending: true });
+
+        if (rewardsError) throw rewardsError;
+
+        // For each eligible reward, try to unlock it
+        for (const reward of rewards) {
+          const { error: unlockError } = await supabase
+            .from('child_rewards')
+            .upsert(
+              { 
+                child_id: id, 
+                reward_id: reward.id,
+                unlocked_at: now 
+              },
+              { 
+                onConflict: 'child_id,reward_id',
+                ignoreDuplicates: true 
+              }
+            );
+
+          if (unlockError) throw unlockError;
+        }
+      }
 
       setChildren(prev => prev.map(child => 
         child.id === id ? { 
