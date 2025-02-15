@@ -9,8 +9,7 @@ SELECT cron.schedule(
   -- Reset all completed tasks
   UPDATE tasks
   SET completed = false,
-      completed_at = NULL,
-      completion_date = NULL
+      completed_at = NULL
   WHERE completed = true;
   $$
 ); 

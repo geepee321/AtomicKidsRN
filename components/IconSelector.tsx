@@ -8,6 +8,8 @@ const TASK_ICONS = [
   'bed-outline',
   'tooth-outline',
   'shower',
+  'bathtub-outline',
+  'broom',
   'food-apple-outline',
   'book-open-outline',
   'basketball-hoop-outline',
@@ -19,11 +21,54 @@ const TASK_ICONS = [
   'gamepad-variant-outline',
   'dog-side',
   'cat',
-  'broom',
   'washing-machine',
   'silverware-fork-knife',
   'hanger',
-  'checkbox-blank-circle-outline'
+  'checkbox-blank-circle-outline',
+  'toothbrush',
+  't-shirt-crew-outline',
+  'book-open-page-variant',  
+  'pencil-outline',  
+  'file-document-edit-outline',  
+  'gamepad-variant',  
+  'soccer',  
+  'basketball',  
+  'school',  
+  'bus-school',    
+  'vacuum',  
+  'dumbbell',  
+  'run-fast',  
+  'music-note',  
+  'monitor',  
+  'trophy-outline',  
+  'ice-cream',  
+  'brush',  
+  'palette',  
+  'camera-outline',  
+  'clock-time-eight-outline',  
+  'calendar-today',  
+  'alarm-outline',  
+  'cup-water',  
+  'food-apple',  
+  'food-croissant',  
+  'food-drumstick-outline',  
+  'carrot',  
+  'cake-variant',  
+  'gift-outline',  
+  'heart-outline',  
+  'star-outline',  
+  'emoticon-happy-outline',  
+  'emoticon-sad-outline',  
+  'camera-retro',  
+  'bicycle',  
+  'car-sports',  
+  'airplane-takeoff',  
+  'water-percent',  
+  'umbrella',  
+  'flower-tulip-outline',  
+  'leaf-outline',  
+  'magnify',  
+  'pencil-box-outline'
 ]
 
 type Props = {
@@ -58,24 +103,26 @@ export default function IconSelector({ value, onSelect }: Props) {
           <View style={styles.modalInner}>
             <Text variant="titleLarge" style={styles.modalTitle}>Select an Icon</Text>
             
-            <View style={styles.grid}>
-              {TASK_ICONS.map((iconName) => (
-                <TouchableOpacity
-                  key={iconName}
-                  style={[
-                    styles.iconButton,
-                    value === iconName && styles.selectedIcon
-                  ]}
-                  onPress={() => handleSelect(iconName)}
-                >
-                  <MaterialCommunityIcons
-                    name={iconName as any}
-                    size={32}
-                    color={value === iconName ? '#4285f4' : '#666'}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+              <View style={styles.grid}>
+                {TASK_ICONS.map((iconName) => (
+                  <TouchableOpacity
+                    key={iconName}
+                    style={[
+                      styles.iconButton,
+                      value === iconName && styles.selectedIcon
+                    ]}
+                    onPress={() => handleSelect(iconName)}
+                  >
+                    <MaterialCommunityIcons
+                      name={iconName as any}
+                      size={32}
+                      color={value === iconName ? '#4285f4' : '#666'}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
           </View>
         </Modal>
       </Portal>
@@ -114,12 +161,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
     justifyContent: 'space-between',
-    paddingBottom: 20,
   },
   iconButton: {
     width: ICON_SIZE,

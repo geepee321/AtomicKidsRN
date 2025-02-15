@@ -4,7 +4,8 @@ import { AuthProvider, useAuth } from '../context/auth';
 import { ChildrenProvider } from '../context/children';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider } from 'react-native-paper';
-import { TasksProvider } from '@/context/tasks'
+import { TasksProvider } from '../context/tasks';
+import { RewardsProvider } from '../contexts/RewardsContext';
 import 'react-native-reanimated'
 
 // Auth state listener component
@@ -35,7 +36,9 @@ export default function RootLayout() {
         <AuthProvider>
           <ChildrenProvider>
             <TasksProvider>
-              <AuthStateListener />
+              <RewardsProvider>
+                <AuthStateListener />
+              </RewardsProvider>
             </TasksProvider>
           </ChildrenProvider>
         </AuthProvider>

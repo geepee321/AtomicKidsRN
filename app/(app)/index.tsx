@@ -32,6 +32,12 @@ export default function HomeScreen() {
     }
   }, [children])
 
+  useEffect(() => {
+    if (selectedChild) {
+      refreshRewards(selectedChild);
+    }
+  }, [selectedChild]);
+
   const handleParentModeSuccess = async () => {
     setParentModeModalVisible(false)
     await setParentMode(true)

@@ -31,6 +31,13 @@ export default function ParentLayout() {
         }}
       />
       <Stack.Screen 
+        name="children/[id]"
+        options={{
+          title: "Edit Child",
+          headerBackTitle: "Children"
+        }}
+      />
+      <Stack.Screen 
         name="tasks/index"
         options={{
           title: "Tasks",
@@ -50,6 +57,13 @@ export default function ParentLayout() {
           title: "Edit Task",
           headerBackTitle: "Tasks"
         }}
+      />
+      <Stack.Screen 
+        name="rewards/index"
+        options={({ route }) => ({
+          title: route.params?.childName ? `${route.params.childName}'s Characters` : 'Characters',
+          headerBackTitle: "Home"
+        })}
       />
     </Stack>
   );

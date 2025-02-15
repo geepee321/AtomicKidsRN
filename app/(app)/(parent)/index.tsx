@@ -2,6 +2,7 @@ import { View, StyleSheet } from 'react-native'
 import { Button, Text, IconButton } from 'react-native-paper'
 import { router } from 'expo-router'
 import { useAuth } from '@/context/auth'
+import { colors } from '@/theme/colors'
 
 export default function ParentDashboard() {
   const { setParentMode, signOut } = useAuth()
@@ -27,11 +28,11 @@ export default function ParentDashboard() {
 
   return (
     <View style={styles.container}>
-      
       <View style={styles.content}>
         <Button
           mode="contained"
           style={styles.button}
+          contentStyle={styles.buttonContent}
           onPress={() => router.push('/(app)/(parent)/children')}
         >
           Manage Children
@@ -40,14 +41,16 @@ export default function ParentDashboard() {
         <Button
           mode="contained"
           style={styles.button}
+          contentStyle={styles.buttonContent}
           onPress={() => router.push('/(app)/(parent)/tasks')}
         >
           Manage Tasks
         </Button>
 
         <Button
-          mode="outlined"
-          style={styles.button}
+          mode="contained"
+          style={[styles.button, styles.secondaryButton]}
+          contentStyle={styles.buttonContent}
           onPress={handleGoHome}
         >
           Return to dashboard
@@ -57,7 +60,8 @@ export default function ParentDashboard() {
 
         <Button
           mode="outlined"
-          style={styles.signOutButton}
+          style={[styles.button, styles.signOutButton]}
+          contentStyle={styles.buttonContent}
           textColor="red"
           onPress={handleSignOut}
         >
@@ -71,14 +75,7 @@ export default function ParentDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    height: 56,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -86,11 +83,28 @@ const styles = StyleSheet.create({
   },
   button: {
     marginVertical: 8,
+    borderRadius: 16,
+    backgroundColor: colors.cardBackground,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  buttonContent: {
+    paddingVertical: 8,
+    height: 56,
+  },
+  secondaryButton: {
+    backgroundColor: colors.cardBackground,
   },
   spacer: {
     flex: 1,
   },
   signOutButton: {
     borderColor: 'red',
+    backgroundColor: 'transparent',
+    elevation: 0,
+    shadowColor: 'transparent',
   },
 }) 

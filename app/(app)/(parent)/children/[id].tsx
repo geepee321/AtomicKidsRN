@@ -2,7 +2,8 @@ import { View, StyleSheet } from 'react-native'
 import { Button, TextInput, Text } from 'react-native-paper'
 import { useState, useEffect } from 'react'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useChildren } from '@/context/children'
+import { useChildren } from '../../../../context/children'
+import { colors } from '@/theme/colors'
 
 export default function EditChildScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -52,8 +53,6 @@ export default function EditChildScreen() {
 
   return (
     <View style={styles.container}>
-      <Text variant="headlineMedium" style={styles.title}>Edit Child</Text>
-
       <TextInput
         label="Child's Name"
         value={name}
@@ -71,6 +70,7 @@ export default function EditChildScreen() {
         loading={loading}
         disabled={loading}
         style={styles.button}
+        contentStyle={styles.buttonContent}
       >
         Update Child Profile
       </Button>
@@ -81,16 +81,18 @@ export default function EditChildScreen() {
         loading={loading}
         disabled={loading}
         style={[styles.button, styles.deleteButton]}
+        contentStyle={styles.buttonContent}
         textColor="red"
       >
         Delete Child Profile
       </Button>
 
       <Button
-        mode="outlined"
+        mode="contained"
         onPress={() => router.back()}
         disabled={loading}
-        style={styles.button}
+        style={[styles.button, styles.secondaryButton]}
+        contentStyle={styles.buttonContent}
       >
         Cancel
       </Button>
@@ -102,10 +104,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-  },
-  title: {
-    marginBottom: 24,
-    textAlign: 'center',
+    backgroundColor: colors.background,
   },
   input: {
     marginBottom: 12,
@@ -115,9 +114,26 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   button: {
-    marginTop: 8,
+    marginVertical: 8,
+    borderRadius: 16,
+    backgroundColor: colors.cardBackground,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  buttonContent: {
+    paddingVertical: 8,
+    height: 56,
+  },
+  secondaryButton: {
+    backgroundColor: colors.cardBackground,
   },
   deleteButton: {
     borderColor: 'red',
+    backgroundColor: 'transparent',
+    elevation: 0,
+    shadowColor: 'transparent',
   },
 }) 

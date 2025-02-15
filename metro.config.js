@@ -1,4 +1,4 @@
-const { getDefaultConfig } = require('expo/metro-config');
+const { getDefaultConfig } = require('@expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
@@ -12,5 +12,8 @@ config.resolver.assetExts.push(
   'jpeg',
   'gif'
 );
+
+// Add support for importing from app directory
+config.resolver.sourceExts = [...config.resolver.sourceExts, 'mjs'];
 
 module.exports = config; 

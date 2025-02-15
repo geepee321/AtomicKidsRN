@@ -1,8 +1,8 @@
 import { View, StyleSheet } from 'react-native'
 import { Button, Text, List, FAB, ActivityIndicator, IconButton } from 'react-native-paper'
 import { router } from 'expo-router'
-import { useTasks, Task } from '@/context/tasks'
-import { useChildren } from '@/context/children'
+import { useTasks, Task } from '../../../../context/tasks'
+import { useChildren } from '../../../../context/children'
 import DraggableFlatList, { 
   ScaleDecorator,
   OpacityDecorator,

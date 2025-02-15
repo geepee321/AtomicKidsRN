@@ -2,9 +2,9 @@ import { View, StyleSheet, ScrollView } from 'react-native'
 import { Button, TextInput, HelperText, Text, List, RadioButton, ActivityIndicator } from 'react-native-paper'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState, useEffect } from 'react'
-import { useChildren } from '@/context/children'
-import { useTasks } from '@/context/tasks'
-import IconSelector from '@/components/IconSelector'
+import { useChildren } from '../../../../context/children'
+import { useTasks } from '../../../../context/tasks'
+import IconSelector from '../../../../components/IconSelector'
 
 export default function EditTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
