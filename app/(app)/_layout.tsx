@@ -12,7 +12,7 @@ export default function AppLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: "AtomicKids",
+          title: "AtomicKids ⚛️🚸",
           headerShown: true  // Show header for main screen
         }}
       />

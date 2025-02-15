@@ -1,7 +1,7 @@
 import { View, StyleSheet } from 'react-native'
 import { Button, Text, List, FAB, ActivityIndicator, IconButton } from 'react-native-paper'
 import { router } from 'expo-router'
-import { useTasks } from '@/context/tasks'
+import { useTasks, Task } from '@/context/tasks'
 import { useChildren } from '@/context/children'
 import DraggableFlatList, { 
   ScaleDecorator,
@@ -11,7 +11,7 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useMemo, useCallback } from 'react'
-import { Task } from '@/types/task'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 
 type TaskWithSection = {
   id: string
@@ -94,7 +94,10 @@ export default function TasksScreen() {
     try {
       const reorderedTasks = data
         .filter(item => item.type === 'task')
-        .map(item => item.task!)
+        .map(item => ({
+          ...item.task!,
+          completed_at: item.task!.completed_at || null
+        }))
       
       await reorderTasks(reorderedTasks)
     } catch (error) {
@@ -122,10 +125,16 @@ export default function TasksScreen() {
                   onTouchStart={() => {
                     drag();
                   }}
+                  style={styles.iconWrapper}
                 >
                   <IconButton
-                    icon="drag"
-                    style={styles.dragHandle}
+                    icon={props => (
+                      <MaterialCommunityIcons
+                        name={item.task!.icon_name as any}
+                        size={24}
+                        color="#666"
+                      />
+                    )}
                   />
                 </View>
               )}
@@ -135,6 +144,7 @@ export default function TasksScreen() {
                 styles.taskItem,
                 isActive && styles.draggingItem
               ]}
+              contentStyle={styles.listItemContent}
             />
           </ScaleDecorator>
         </ShadowDecorator>
@@ -223,7 +233,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     elevation: 4,
   },
-  dragHandle: {
-    marginLeft: -10,
+  iconWrapper: {
+    paddingLeft: 8,
+    justifyContent: 'center',
+  },
+  listItemContent: {
+    paddingLeft: 0,
   },
 }) 

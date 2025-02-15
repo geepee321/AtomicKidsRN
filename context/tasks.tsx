@@ -3,16 +3,16 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from './auth'
 import { sortBy } from 'lodash'
 
-type Task = {
+export type Task = {
   id: string
   title: string
   child_id: string | null
   completed: boolean
   completed_at: string | null
-  completion_date: string | null
   created_at: string
   user_id: string
   order: number
+  icon_name: string
 }
 
 type TasksContextType = {
@@ -20,7 +20,7 @@ type TasksContextType = {
   loading: boolean
   error: string | null
   refreshTasks: () => Promise<void>
-  addTask: (task: { title: string; child_id?: string }) => Promise<void>
+  addTask: (task: { title: string; child_id?: string; icon_name: string }) => Promise<void>
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   reorderTasks: (tasks: Task[]) => Promise<void>
@@ -99,7 +99,7 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const addTask = async (task: { title: string; child_id?: string }) => {
+  const addTask = async (task: { title: string; child_id?: string; icon_name: string }) => {
     try {
       setError(null)
       

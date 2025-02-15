@@ -4,11 +4,13 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useState, useEffect } from 'react'
 import { useChildren } from '@/context/children'
 import { useTasks } from '@/context/tasks'
+import IconSelector from '@/components/IconSelector'
 
 export default function EditTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const [title, setTitle] = useState('')
   const [selectedChild, setSelectedChild] = useState('')
+  const [selectedIcon, setSelectedIcon] = useState('checkbox-blank-circle-outline')
   const [loading, setLoading] = useState(false)
   const [initializing, setInitializing] = useState(true)
   
@@ -21,6 +23,7 @@ export default function EditTaskScreen() {
     if (task) {
       setTitle(task.title)
       setSelectedChild(task.child_id || '')
+      setSelectedIcon(task.icon_name)
       setInitializing(false)
     }
   }, [id, tasks])
@@ -32,7 +35,8 @@ export default function EditTaskScreen() {
     try {
       await updateTask(id, {
         title: title.trim(),
-        child_id: selectedChild || null
+        child_id: selectedChild || null,
+        icon_name: selectedIcon
       })
       
       router.back()
@@ -74,6 +78,11 @@ export default function EditTaskScreen() {
       <HelperText type="error" visible={!title.trim()}>
         Title is required
       </HelperText>
+
+      <IconSelector
+        value={selectedIcon}
+        onSelect={setSelectedIcon}
+      />
 
       <Text style={styles.label}>Assign to Child (Optional)</Text>
       
