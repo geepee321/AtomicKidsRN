@@ -1,12 +1,15 @@
 import React from 'react'
 import { View, StyleSheet, FlatList } from 'react-native'
-import { Button, Card, FAB, Text, IconButton, ActivityIndicator } from 'react-native-paper'
+import { Button, List, FAB, Text, IconButton, ActivityIndicator } from 'react-native-paper'
 import { router } from 'expo-router'
 import { useChildren, Child } from '@/context/children'
+import { useRewards } from '@/contexts/RewardsContext'
 import { colors } from '@/theme/colors'
+import { Image } from 'expo-image'
 
 export default function ChildrenScreen() {
   const { children, loading } = useChildren()
+  const { rewards } = useRewards()
 
   if (loading) {
     return (
@@ -16,20 +19,37 @@ export default function ChildrenScreen() {
     )
   }
 
+  const getChildAvatar = (child: Child): string | undefined => {
+    if (!child.selected_character_id) return undefined;
+    const selectedCharacter = rewards.find(r => r.id === child.selected_character_id);
+    return selectedCharacter?.image_url;
+  };
+
   const renderChild = ({ item: child }: { item: Child }) => (
-    <Card 
-      style={styles.card}
-      onPress={() => router.push(`/(app)/(parent)/children/${child.id}`)}
-    >
-      <Card.Content style={styles.cardContent}>
-        <Text variant="titleLarge">{child.name}</Text>
+    <List.Item
+      title={child.name}
+      style={styles.childItem}
+      contentStyle={styles.listItemContent}
+      titleStyle={styles.childName}
+      left={props => (
+        <View style={styles.avatarContainer}>
+          <Image
+            source={{ uri: getChildAvatar(child) }}
+            style={styles.avatar}
+            contentFit="cover"
+            placeholder={require('../../../../assets/default-avatar.png')}
+          />
+        </View>
+      )}
+      right={props => (
         <IconButton
-          icon="pencil"
+          icon="chevron-right"
           size={24}
           onPress={() => router.push(`/(app)/(parent)/children/${child.id}`)}
         />
-      </Card.Content>
-    </Card>
+      )}
+      onPress={() => router.push(`/(app)/(parent)/children/${child.id}`)}
+    />
   )
 
   return (
@@ -70,6 +90,7 @@ export default function ChildrenScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
     backgroundColor: colors.background,
   },
   centered: {
@@ -87,11 +108,11 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   list: {
-    padding: 16,
+    paddingTop: 8,
   },
-  card: {
-    marginBottom: 16,
-    borderRadius: 16,
+  childItem: {
+    borderRadius: 8,
+    marginBottom: 8,
     backgroundColor: colors.cardBackground,
     elevation: 2,
     shadowColor: '#000',
@@ -99,22 +120,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    height: 56,
+  childName: {
+    fontSize: 16,
+  },
+  listItemContent: {
+    paddingLeft: 0,
+  },
+  avatarContainer: {
+    paddingLeft: 16,
+    paddingRight: 8,
+    justifyContent: 'center',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   button: {
     marginVertical: 8,
     borderRadius: 16,
-    backgroundColor: colors.cardBackground,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
   },
   buttonContent: {
     paddingVertical: 8,

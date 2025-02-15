@@ -33,6 +33,7 @@ export default function ParentDashboard() {
           mode="contained"
           style={styles.button}
           contentStyle={styles.buttonContent}
+          textColor="black"
           onPress={() => router.push('/(app)/(parent)/children')}
         >
           Manage Children
@@ -42,6 +43,7 @@ export default function ParentDashboard() {
           mode="contained"
           style={styles.button}
           contentStyle={styles.buttonContent}
+          textColor="black"
           onPress={() => router.push('/(app)/(parent)/tasks')}
         >
           Manage Tasks
@@ -51,6 +53,7 @@ export default function ParentDashboard() {
           mode="contained"
           style={[styles.button, styles.secondaryButton]}
           contentStyle={styles.buttonContent}
+          textColor="black"
           onPress={handleGoHome}
         >
           Return to dashboard

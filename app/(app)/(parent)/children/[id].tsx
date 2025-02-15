@@ -71,8 +71,9 @@ export default function EditChildScreen() {
         disabled={loading}
         style={styles.button}
         contentStyle={styles.buttonContent}
+        textColor="black"
       >
-        Update Child Profile
+        Update Child
       </Button>
 
       <Button
@@ -84,18 +85,9 @@ export default function EditChildScreen() {
         contentStyle={styles.buttonContent}
         textColor="red"
       >
-        Delete Child Profile
+        Delete Child
       </Button>
 
-      <Button
-        mode="contained"
-        onPress={() => router.back()}
-        disabled={loading}
-        style={[styles.button, styles.secondaryButton]}
-        contentStyle={styles.buttonContent}
-      >
-        Cancel
-      </Button>
     </View>
   )
 }

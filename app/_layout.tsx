@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../context/auth';
 import { ChildrenProvider } from '../context/children';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { PaperProvider } from 'react-native-paper';
+import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { TasksProvider } from '../context/tasks';
 import { RewardsProvider } from '../contexts/RewardsContext';
 import 'react-native-reanimated'
@@ -32,7 +32,7 @@ function AuthStateListener() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <PaperProvider>
+      <PaperProvider theme={MD3LightTheme}>
         <AuthProvider>
           <ChildrenProvider>
             <TasksProvider>
