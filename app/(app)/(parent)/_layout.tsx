@@ -1,4 +1,5 @@
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
+import { IconButton } from 'react-native-paper';
 
 export default function ParentLayout() {
   return (
@@ -12,7 +13,12 @@ export default function ParentLayout() {
         name="index"
         options={{
           title: "Settings",
-          headerBackTitle: "Home"
+          headerLeft: () => (
+            <IconButton
+              icon="close"
+              onPress={() => router.back()}
+            />
+          )
         }}
       />
 
@@ -62,7 +68,12 @@ export default function ParentLayout() {
         name="rewards/index"
         options={({ route }) => ({
           title: route.params?.childName ? `${route.params.childName}'s Characters` : 'Characters',
-          headerBackTitle: "Home"
+          headerLeft: () => (
+            <IconButton
+              icon="close"
+              onPress={() => router.back()}
+            />
+          )
         })}
       />
     </Stack>

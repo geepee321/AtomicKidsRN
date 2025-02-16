@@ -75,7 +75,6 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
         .insert([{ 
           name, 
           user_id: user?.id,
-          avatar_id: '1', // Default avatar
           order: maxOrder,
           selected_character_id: defaultReward.id // Set default character
         }])
@@ -156,7 +155,7 @@ export function ChildrenProvider({ children: childrenProp }: { children: React.R
       const child = children.find(c => c.id === id)
       if (!child) return
 
-      const newStreak = increment ? (child.streak + 1) : 0
+      const newStreak = increment ? (child.streak + 1) : Math.max(0, child.streak - 1)
       const now = new Date().toISOString()
 
       const { error: updateError } = await supabase

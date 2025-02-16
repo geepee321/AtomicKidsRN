@@ -1,12 +1,12 @@
 import React from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native'
 import { Text, IconButton, Card, Checkbox, SegmentedButtons } from 'react-native-paper'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { useAuth } from '../../context/auth'
 import { useTasks } from '../../context/tasks'
 import { useChildren } from '../../context/children'
 import { useRewards } from '../../contexts/RewardsContext'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import ParentModeModal from '../../components/ParentModeModal'
 import CelebrationModal from '../../components/CelebrationModal'
 import { CharactersTile } from '../../components/CharactersTile'
@@ -16,7 +16,10 @@ import Animated, {
   useAnimatedStyle, 
   useSharedValue, 
   withSpring,
-  runOnJS 
+  withSequence,
+  withTiming,
+  runOnJS,
+  Easing
 } from 'react-native-reanimated'
 
 const DEFAULT_ICON = 'checkbox-blank-circle-outline'
@@ -25,7 +28,7 @@ const SWIPE_THRESHOLD = 100
 
 export default function HomeScreen() {
   const { user, isParentMode, setParentMode } = useAuth()
-  const { tasks, updateTask } = useTasks()
+  const { tasks, updateTask, refreshTasks } = useTasks()
   const { children, updateStreak } = useChildren()
   const { rewards, refreshRewards, setActiveChild } = useRewards()
   const [selectedChild, setSelectedChild] = useState('')
@@ -34,20 +37,123 @@ export default function HomeScreen() {
   const [showCelebration, setShowCelebration] = useState(false)
   const translateX = useSharedValue(0)
 
+  // Create a single shared animation value for all tasks
+  const scale = useSharedValue(1)
+  const rotate = useSharedValue('0deg')
+  
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scale.value },
+      { rotate: rotate.value }
+    ]
+  }))
+
+  const playCompletionAnimation = useCallback(() => {
+    scale.value = withSequence(
+      withSpring(1.2, { damping: 2 }),
+      withSpring(1, { damping: 4 })
+    )
+    rotate.value = withSequence(
+      withTiming('-10deg', { duration: 100 }),
+      withTiming('10deg', { duration: 100 }),
+      withTiming('0deg', { duration: 100 })
+    )
+  }, [])
+
+  const handleToggleComplete = async (taskId: string, currentlyCompleted: boolean) => {
+    try {
+      if (!currentlyCompleted) {
+        playCompletionAnimation()
+      }
+
+      // Update task completion status
+      await updateTask(taskId, { completed: !currentlyCompleted })
+      
+      const childTasks = tasks.filter(t => t.child_id === selectedChild)
+      const selectedChildData = children.find(child => child.id === selectedChild)
+      
+      if (currentlyCompleted) {
+        // If uncompleting a task, check if we need to reset streak
+        const lastCompletedAt = selectedChildData?.last_completed_at
+        const today = new Date()
+        const lastCompletedDate = lastCompletedAt ? new Date(lastCompletedAt) : null
+        
+        // Only reset streak if it was completed today
+        if (lastCompletedDate && 
+            lastCompletedDate.toDateString() === today.toDateString()) {
+          await updateStreak(selectedChild, false)
+          await refreshRewards(selectedChild)
+        }
+      } else {
+        // If completing a task, check if all tasks are now complete
+        const allTasksCompleted = childTasks
+          .filter(t => t.id !== taskId)
+          .every(t => t.completed)
+
+        if (allTasksCompleted) {
+          // Check if streak was already incremented today
+          const lastCompletedAt = selectedChildData?.last_completed_at
+          const today = new Date()
+          const lastCompletedDate = lastCompletedAt ? new Date(lastCompletedAt) : null
+          
+          // Only increment streak if not already completed today
+          if (!lastCompletedDate || 
+              lastCompletedDate.toDateString() !== today.toDateString()) {
+            await updateStreak(selectedChild, true)
+            await refreshRewards(selectedChild)
+            
+            // Fetch a celebration GIF
+            try {
+              const response = await fetch(
+                `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=celebration&rating=g`
+              )
+              const data = await response.json()
+              setCelebrationGif(data.data.images.original.url)
+              setShowCelebration(true)
+            } catch (error) {
+              console.error('Error fetching celebration GIF:', error)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling task completion:', error)
+    }
+  }
+
+  // Refresh tasks when screen becomes active
+  useFocusEffect(
+    useCallback(() => {
+      refreshTasks()
+    }, [refreshTasks])
+  )
+
   // Set first child as selected when children load
   useEffect(() => {
     if (children.length > 0 && !selectedChild) {
-      setSelectedChild(children[0].id)
-      setActiveChild(children[0].id)
+      const firstChild = children[0]
+      setSelectedChild(firstChild.id)
+      setActiveChild(firstChild.id)
     }
   }, [children])
+
+  // Reset selected child if it doesn't exist in children array
+  useEffect(() => {
+    if (selectedChild && children.length > 0) {
+      const childExists = children.some(child => child.id === selectedChild)
+      if (!childExists) {
+        setSelectedChild(children[0].id)
+        setActiveChild(children[0].id)
+      }
+    }
+  }, [children, selectedChild])
 
   useEffect(() => {
     if (selectedChild) {
       setActiveChild(selectedChild)
       refreshRewards(selectedChild)
     }
-  }, [selectedChild])
+  }, [selectedChild, tasks])
 
   const handleParentModeSuccess = async () => {
     setParentModeModalVisible(false)
@@ -82,51 +188,6 @@ export default function HomeScreen() {
     }
     return null
   }
-
-  const handleToggleComplete = async (taskId: string, currentlyCompleted: boolean) => {
-    try {
-      // Update task completion status
-      await updateTask(taskId, { completed: !currentlyCompleted });
-
-      // If completing all tasks for the day, increment streak
-      if (!currentlyCompleted) {
-        const childTasks = tasks.filter(t => t.child_id === selectedChild);
-        const allOtherTasksCompleted = childTasks
-          .filter(t => t.id !== taskId)
-          .every(t => t.completed);
-
-        if (allOtherTasksCompleted) {
-          const selectedChildData = children.find(child => child.id === selectedChild);
-          
-          // Check if streak was already incremented today
-          const lastCompletedAt = selectedChildData?.last_completed_at;
-          const today = new Date();
-          const lastCompletedDate = lastCompletedAt ? new Date(lastCompletedAt) : null;
-          
-          // Only increment streak if not already completed today
-          if (!lastCompletedDate || 
-              lastCompletedDate.toDateString() !== today.toDateString()) {
-            await updateStreak(selectedChild, true);
-            await refreshRewards(selectedChild);
-            
-            // Fetch a celebration GIF
-            try {
-              const response = await fetch(
-                `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=celebration&rating=g`
-              );
-              const data = await response.json();
-              setCelebrationGif(data.data.images.original.url);
-              setShowCelebration(true);
-            } catch (error) {
-              console.error('Error fetching celebration GIF:', error);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error toggling task completion:', error);
-    }
-  };
 
   const childButtons = children.map(child => ({
     value: child.id,
@@ -174,45 +235,48 @@ export default function HomeScreen() {
       translateX.value = withSpring(0)
     })
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }]
-  }))
-
   return (
     <GestureHandlerRootView style={styles.container}>
       {children.length > 0 ? (
         <>
+          <View style={styles.childSelector}>
+            {children.map(child => {
+              const avatarUrl = getChildAvatar(child.id);
+              return (
+                <Card 
+                  key={child.id}
+                  style={[
+                    styles.childCard,
+                    selectedChild === child.id && styles.selectedChildCard
+                  ]}
+                  onPress={() => setSelectedChild(child.id)}
+                >
+                  <Card.Content style={styles.childContent}>
+                    <Text variant="titleMedium">{child.name}</Text>
+                  </Card.Content>
+                </Card>
+              );
+            })}
+          </View>
+
           <GestureDetector gesture={gesture}>
             <Animated.View style={[{ flex: 1 }, animatedStyle]}>
-              <View style={styles.childSelector}>
-                {children.map(child => {
-                  const avatarUrl = getChildAvatar(child.id);
-                  return (
-                    <Card 
-                      key={child.id}
-                      style={[
-                        styles.childCard,
-                        selectedChild === child.id && styles.selectedChildCard
-                      ]}
-                      onPress={() => setSelectedChild(child.id)}
-                    >
-                      <Card.Content style={styles.childContent}>
-                        <Text variant="titleMedium">{child.name}</Text>
-                      </Card.Content>
-                    </Card>
-                  );
-                })}
-              </View>
-
               <CharactersTile selectedChildId={selectedChild} />
               
               <View style={styles.statsSection}>
                 <View style={styles.statBox}>
                   <Text variant="titleSmall" style={styles.statLabel}>Today's Tasks</Text>
-                  <Text variant="headlineMedium" style={styles.statValue}>
-                    {filteredTasks.filter(t => t.completed).length} out of {filteredTasks.length}
+                  <Text variant="headlineMedium" style={[
+                    styles.statValue,
+                    filteredTasks.length - filteredTasks.filter(t => t.completed).length === 0 && styles.allDoneText
+                  ]}>
+                    {filteredTasks.length - filteredTasks.filter(t => t.completed).length === 0 
+                      ? "All done!" 
+                      : <>{filteredTasks.length - filteredTasks.filter(t => t.completed).length} <Text style={styles.statUnit}>to go</Text></>
+                    }
                   </Text>
                 </View>
+
                 <View style={styles.statBox}>
                   <Text variant="titleSmall" style={styles.statLabel}>Streak</Text>
                   <Text variant="headlineMedium" style={styles.statValue}>
@@ -222,38 +286,38 @@ export default function HomeScreen() {
               </View>
 
               <ScrollView style={styles.content}>
-                        
                 {filteredTasks.length === 0 ? (
-                  <Text style={styles.emptyText}>No tasks available</Text>
+                  <Text style={styles.emptyText}>No tasks. Add tasks in settings.</Text>
                 ) : (
                   filteredTasks.map((task) => (
-                    <Card 
-                      key={task.id}
-                      style={[
-                        styles.taskCard,
-                        task.completed && styles.completedTask
-                      ]}
-                      onPress={() => handleToggleComplete(task.id, task.completed)}
-                    >
-                      <Card.Content style={styles.taskContent}>
-                        <View style={styles.taskIcon}>
-                          {task.completed ? (
-                            <IconButton icon="check" size={24} iconColor="#fff" />
-                          ) : (
-                            <View style={styles.iconContainer}>
-                              <MaterialCommunityIcons
-                                name={(task.icon_name || DEFAULT_ICON) as any}
-                                size={28}
-                                color="#666"
-                              />
-                            </View>
-                          )}
-                        </View>
-                        <View style={styles.taskInfo}>
-                          <Text variant="titleLarge">{task.title}</Text>
-                        </View>
-                      </Card.Content>
-                    </Card>
+                    <Animated.View key={task.id} style={animatedStyle}>
+                      <Card 
+                        style={[
+                          styles.taskCard,
+                          task.completed && styles.completedTask
+                        ]}
+                        onPress={() => handleToggleComplete(task.id, task.completed)}
+                      >
+                        <Card.Content style={styles.taskContent}>
+                          <View style={styles.taskIcon}>
+                            {task.completed ? (
+                              <IconButton icon="check" size={24} iconColor="#fff" />
+                            ) : (
+                              <View style={styles.iconContainer}>
+                                <MaterialCommunityIcons
+                                  name={(task.icon_name || DEFAULT_ICON) as any}
+                                  size={28}
+                                  color="#666"
+                                />
+                              </View>
+                            )}
+                          </View>
+                          <View style={styles.taskInfo}>
+                            <Text variant="titleLarge">{task.title}</Text>
+                          </View>
+                        </Card.Content>
+                      </Card>
+                    </Animated.View>
                   ))
                 )}
               </ScrollView>
@@ -261,14 +325,8 @@ export default function HomeScreen() {
           </GestureDetector>
         </>
       ) : (
-        <Text style={styles.emptyText}>No children added yet</Text>
+        <Text style={styles.emptyText}>No children added yet. Click the settings button to get started.</Text>
       )}
-
-      <IconButton
-        icon={isParentMode ? 'cog' : 'cog'}
-        style={styles.parentModeButton}
-        onPress={handleParentModeToggle}
-      />
 
       <ParentModeModal
         visible={parentModeModalVisible}
@@ -312,13 +370,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 0,
     shadowColor: 'transparent',
-    elevation: 0,
   },
   selectedChildCard: {
     backgroundColor: '#e8f0fe',
     borderColor: '#4285f4',
     borderWidth: 2,
-    elevation: 0,
   },
   childContent: {
     flexDirection: 'row',
@@ -335,7 +391,7 @@ const styles = StyleSheet.create({
   },
   statsSection: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 8,
     gap: 16,
     paddingHorizontal: 20,
   },
@@ -346,10 +402,15 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   statLabel: {
-    color: '#666',
     marginBottom: 4,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   statValue: {
+    fontWeight: 'bold',
+  },
+  allDoneText: {
+    color: '#34c759',
     fontWeight: 'bold',
   },
   statUnit: {
@@ -359,7 +420,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 20,
   },
   taskCard: {
     marginBottom: 12,

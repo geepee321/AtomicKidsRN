@@ -5,7 +5,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "jsx": "react-native",
+    "esModuleInterop": true,
+    "allowJs": true,
+    "skipLibCheck": true
   },
   "include": [
     "**/*.ts",

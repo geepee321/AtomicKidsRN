@@ -26,7 +26,6 @@ const TASK_ICONS = [
   'hanger',
   'checkbox-blank-circle-outline',
   'toothbrush',
-  't-shirt-crew-outline',
   'book-open-page-variant',  
   'pencil-outline',  
   'file-document-edit-outline',  
@@ -44,7 +43,6 @@ const TASK_ICONS = [
   'ice-cream',  
   'brush',  
   'palette',  
-  'camera-outline',  
   'clock-time-eight-outline',  
   'calendar-today',  
   'alarm-outline',  
@@ -66,7 +64,6 @@ const TASK_ICONS = [
   'water-percent',  
   'umbrella',  
   'flower-tulip-outline',  
-  'leaf-outline',  
   'magnify',  
   'pencil-box-outline'
 ]

@@ -1,18 +1,17 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 
 type AuthContextType = {
   user: User | null
   session: Session | null
   loading: boolean
-  isParentMode: boolean
   signUp: (email: string, password: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
-  verifyParentPin: (pin: string) => boolean
-  setParentMode: (enabled: boolean) => Promise<void>
+  verifyParentPin: (pin: string) => Promise<boolean>
+  setParentPin: (pin: string) => Promise<void>
+  getParentPin: () => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -21,43 +20,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isParentMode, setIsParentMode] = useState(false)
-
-  // Load parent mode state on startup
-  useEffect(() => {
-    loadParentMode()
-  }, [])
-
-  // Load parent mode from storage
-  const loadParentMode = async () => {
-    try {
-      const value = await AsyncStorage.getItem('isParentMode')
-      setIsParentMode(value === 'true')
-    } catch (error) {
-      console.error('Error loading parent mode:', error)
-    }
-  }
-
-  // Save parent mode to storage
-  const setParentMode = async (enabled: boolean) => {
-    try {
-      await AsyncStorage.setItem('isParentMode', enabled.toString())
-      setIsParentMode(enabled)
-    } catch (error) {
-      console.error('Error saving parent mode:', error)
-    }
-  }
-
-  // Clear parent mode on sign out
-  const signOut = async () => {
-    try {
-      await setParentMode(false)
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-    } catch (error) {
-      throw error
-    }
-  }
 
   useEffect(() => {
     // Check active session
@@ -92,20 +54,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error
   }
 
-  const verifyParentPin = (pin: string) => {
-    return pin === '1234' // Default PIN as specified in docs
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    } catch (error) {
+      throw error
+    }
+  }
+
+  const getParentPin = async () => {
+    if (!user) {
+      return null
+    }
+    const { data, error } = await supabase
+      .from('parent_pins')
+      .select('pin')
+      .eq('user_id', user.id)
+      .single()
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      throw error
+    }
+    return data?.pin || null
+  }
+
+  const setParentPin = async (pin: string) => {
+    if (!user) throw new Error('No user logged in')
+    
+    // Use upsert to handle both insert and update cases
+    const { error } = await supabase
+      .from('parent_pins')
+      .upsert({ 
+        user_id: user.id,
+        pin: pin 
+      })
+    
+    if (error) {
+      throw error
+    }
+  }
+
+  const verifyParentPin = async (pin: string) => {
+    if (!user) {
+      return false
+    }
+    const storedPin = await getParentPin()
+    return storedPin === pin
   }
 
   const value = {
     user,
     session,
     loading,
-    isParentMode,
     signUp,
     signIn,
     signOut,
     verifyParentPin,
-    setParentMode,
+    setParentPin,
+    getParentPin,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

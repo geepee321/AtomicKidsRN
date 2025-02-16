@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { Image } from 'expo-image';
+import { Image as ExpoImage } from 'expo-image';
 import { useRewards } from '../contexts/RewardsContext';
 import { useChildren } from '../context/children';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -46,15 +46,10 @@ export const RewardsScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['left', 'right', 'bottom']} style={styles.container}>
       <ScrollView 
         style={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={handleRefresh}
-          />
-        }
+        contentContainerStyle={styles.contentContainer}
       >
         <Text style={styles.subtitle}>
           Unlock new characters by maintaining your task streak!
@@ -83,7 +78,7 @@ export const RewardsScreen = () => {
                 onPress={() => unlocked && handleCharacterSelect(reward.id)}
                 disabled={!unlocked}
               >
-                <Image
+                <ExpoImage
                   source={{ uri: reward.image_url }}
                   style={styles.characterImage}
                   contentFit="contain"
@@ -129,12 +124,15 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+  },
+  contentContainer: {
+    paddingTop: 0,
   },
   subtitle: {
     fontSize: 16,
     color: colors.textSecondary,
     marginBottom: 16,
+    marginTop: 16,
   },
   streakInfo: {
     flexDirection: 'row',

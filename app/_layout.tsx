@@ -18,11 +18,11 @@ function AuthStateListener() {
     const inAuthGroup = segments[0] === 'auth';
 
     if (!user && !inAuthGroup) {
-      // Redirect to the sign-in page if not signed in
-      router.replace('/auth/login');
+      // Use replace with immediate option to prevent animation
+      router.replace('/auth/login', { immediate: true });
     } else if (user && inAuthGroup) {
-      // Redirect away from auth group if signed in
-      router.replace('/(app)');
+      // Use replace with immediate option to prevent animation
+      router.replace('/(app)', { immediate: true });
     }
   }, [user, segments]);
 

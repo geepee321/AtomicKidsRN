@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, View, Image } from 'react-native'
 import { Button, TextInput, Title, Text } from 'react-native-paper'
 import { useAuth } from '../../context/auth'
 import { Link, router } from 'expo-router'
@@ -26,7 +26,12 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Title style={styles.title}>Welcome Back!</Title>
+      <View style={styles.logoContainer}>
+        <View style={styles.emojiContainer}>
+          <Title style={styles.bigEmoji}>⚛️</Title>
+        </View>
+        <Title style={styles.title}>Welcome to Atomic Kids</Title>
+      </View>
       
       <TextInput
         label="Email"
@@ -55,13 +60,14 @@ export default function LoginScreen() {
         loading={loading}
         disabled={loading}
         style={styles.button}
+        contentStyle={styles.buttonContent}
       >
         Login
       </Button>
 
       <View style={styles.footer}>
         <Text>Don't have an account? </Text>
-        <Link href="/auth/signup">Sign up</Link>
+        <Link href="/auth/signup" style={styles.link}>Sign up</Link>
       </View>
     </View>
   )
@@ -71,18 +77,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    justifyContent: 'center',
+    backgroundColor: '#F5F5F5',
   },
-  title: {
-    fontSize: 24,
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+    marginTop: '20%',
+  },
+  emojiContainer: {
+    width: 120,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 20,
+  },
+  bigEmoji: {
+    fontSize: 80,
+    lineHeight: 100,
     textAlign: 'center',
   },
+  title: {
+    fontSize: 28,
+    marginBottom: 40,
+    textAlign: 'center',
+    color: '#333',
+  },
   input: {
-    marginBottom: 12,
+    marginBottom: 16,
+    backgroundColor: 'white',
   },
   button: {
     marginTop: 16,
+    borderRadius: 25,
+    backgroundColor: '#6750A4',
+    height: 56,
+  },
+  buttonContent: {
+    height: 56,
   },
   error: {
     color: 'red',
@@ -91,6 +122,9 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 24,
+  },
+  link: {
+    color: '#6750A4',
   },
 }) 

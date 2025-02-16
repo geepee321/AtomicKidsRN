@@ -87,7 +87,6 @@ This document outlines the technical specifications, app flow, and features for 
    - id: uuid (primary key)
    - child_id: uuid (foreign key -> children.id)
    - title: string
-   - description: string
    - pictogram_url: string
    - is_active: boolean
    - created_at: timestamp
