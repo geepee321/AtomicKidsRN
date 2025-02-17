@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './auth'
 import { sortBy } from 'lodash'
+import { PostgrestError } from '@supabase/supabase-js'
 
 export type Task = {
   id: string
@@ -27,6 +28,18 @@ type TasksContextType = {
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined)
+
+const handleSupabaseError = async (error: PostgrestError) => {
+  if (error.code === 'PGRST301') {
+    // JWT has expired, try to refresh the session
+    const { data, error: refreshError } = await supabase.auth.refreshSession()
+    if (refreshError) {
+      throw new Error('Session refresh failed: ' + refreshError.message)
+    }
+    return data.session
+  }
+  throw error
+}
 
 export function TasksProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -72,28 +85,36 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
 
   const refreshTasks = async () => {
     try {
-      setLoading(true)
       setError(null)
+      setLoading(true)
 
       if (!user) {
         throw new Error('No user logged in')
       }
 
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
-        .order('order', { ascending: true })
+        .order('order')
 
-      if (fetchError) {
-        console.error('Fetch error:', fetchError)
-        throw fetchError
+      if (error) {
+        // Try to handle JWT expiration
+        await handleSupabaseError(error)
+        // If handled successfully, retry the query
+        const { data: retryData, error: retryError } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('order')
+        
+        if (retryError) throw retryError
+        setTasks(retryData || [])
+      } else {
+        setTasks(data || [])
       }
-
-      setTasks(data || [])
     } catch (err) {
-      console.error('Error in refreshTasks:', err)
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : 'An error occurred while fetching tasks')
     } finally {
       setLoading(false)
     }
