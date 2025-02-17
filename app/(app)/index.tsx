@@ -21,6 +21,7 @@ import Animated, {
   runOnJS,
   Easing
 } from 'react-native-reanimated'
+import { Audio } from 'expo-av'
 
 const DEFAULT_ICON = 'checkbox-blank-circle-outline'
 const GIPHY_API_KEY = 'fgUc6JXoNLhz9vJnqkLq1h8r7NGY73JL'
@@ -60,10 +61,69 @@ export default function HomeScreen() {
     )
   }, [])
 
+  const [taskSound, setTaskSound] = useState<Audio.Sound | null>(null)
+  const [allDoneSound, setAllDoneSound] = useState<Audio.Sound | null>(null)
+
+  // Load sounds when component mounts
+  useEffect(() => {
+    async function loadSounds() {
+      try {
+        const { sound: taskCompletionSound } = await Audio.Sound.createAsync(
+          require('../../assets/sounds/ding-101492-taskdone.mp3'),
+          { shouldPlay: false }
+        )
+        const { sound: allTasksCompletedSound } = await Audio.Sound.createAsync(
+          require('../../assets/sounds/ding-47489-alltasksdone.mp3'),
+          { shouldPlay: false }
+        )
+        
+        setTaskSound(taskCompletionSound)
+        setAllDoneSound(allTasksCompletedSound)
+      } catch (error) {
+        console.error('Error loading sounds:', error)
+      }
+    }
+
+    loadSounds()
+
+    // Cleanup sounds when component unmounts
+    return () => {
+      if (taskSound) {
+        taskSound.unloadAsync()
+      }
+      if (allDoneSound) {
+        allDoneSound.unloadAsync()
+      }
+    }
+  }, [])
+
+  const playTaskCompletionSound = async () => {
+    try {
+      if (taskSound) {
+        await taskSound.setPositionAsync(0)
+        await taskSound.playAsync()
+      }
+    } catch (error) {
+      console.error('Error playing task completion sound:', error)
+    }
+  }
+
+  const playAllTasksCompletedSound = async () => {
+    try {
+      if (allDoneSound) {
+        await allDoneSound.setPositionAsync(0)
+        await allDoneSound.playAsync()
+      }
+    } catch (error) {
+      console.error('Error playing all tasks completed sound:', error)
+    }
+  }
+
   const handleToggleComplete = async (taskId: string, currentlyCompleted: boolean) => {
     try {
       if (!currentlyCompleted) {
         playCompletionAnimation()
+        await playTaskCompletionSound()
       }
 
       // Update task completion status
@@ -101,6 +161,9 @@ export default function HomeScreen() {
               lastCompletedDate.toDateString() !== today.toDateString()) {
             await updateStreak(selectedChild, true)
             await refreshRewards(selectedChild)
+            
+            // Play celebration sound
+            await playAllTasksCompletedSound()
             
             // Fetch a celebration GIF
             try {

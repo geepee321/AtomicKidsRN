@@ -1,9 +1,9 @@
 const { getDefaultConfig } = require('@expo/metro-config');
 
-const config = getDefaultConfig(__dirname);
+const defaultConfig = getDefaultConfig(__dirname);
 
 // Add this to handle assets properly
-config.resolver.assetExts.push(
+defaultConfig.resolver.assetExts.push(
   // Adds support for `.db` files for SQLite databases
   'db',
   // Add any other asset extensions you're using
@@ -14,6 +14,13 @@ config.resolver.assetExts.push(
 );
 
 // Add support for importing from app directory
-config.resolver.sourceExts = [...config.resolver.sourceExts, 'mjs'];
+defaultConfig.resolver.sourceExts = [
+  'js',
+  'jsx',
+  'json',
+  'ts',
+  'tsx',
+  'cjs',
+];
 
-module.exports = config; 
+module.exports = defaultConfig; 
